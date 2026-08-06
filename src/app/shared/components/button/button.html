@@ -1,0 +1,8 @@
+<button
+  type="button"
+  [class]="classes()"
+  [disabled]="disabled() || loading()"
+  (click)="onClick()"
+>
+  {{ text() }}
+</button>
