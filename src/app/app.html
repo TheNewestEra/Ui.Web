@@ -1,30 +1,27 @@
-<app-card>
-  <div card-title>Dashboard <b>Cool</b></div>
+<div class="min-h-screen bg-base-200">
+  <main class="container mx-auto px-6 py-8">
+    <app-page-header
+      title="Products"
+      subtitle="Some of your Products..."
+      buttonText="Add"
+      (buttonClicked)="createProduct()"
+    />
 
-  <div card-content>
-    Welcome to the dashboard!
-    <br />
+    <app-card>
+      <div card-title>Product Name</div>
 
-    <app-button text="Save" variant="primary" (clicked)="save()"> </app-button>
+      <div card-content>
+        <p>Product description</p>
+        <p>Price</p>
+        <p>Date</p>
+        <br />
 
-    <app-button text="Sec" variant="secondary"> </app-button>
-
-    <app-button text="Acc" variant="accent"> </app-button>
-
-    <app-button text="outline" variant="outline"> </app-button>
-
-    <app-button text="Ghost" variant="ghost"> </app-button>
-
-    <app-button text="Delete" variant="error"> </app-button>
-
-    <app-button text="Suc" variant="success"> </app-button>
-
-    <app-button text="Small" variant="primary" size="sm"> </app-button>
-    <app-button text="Medium" variant="primary" size="md"> </app-button>
-    <app-button text="Large" variant="primary" size="lg"> </app-button>
-
-    <app-button text="Loading..." [loading]="true"> </app-button>
-
-    <app-button text="Disabled" [disabled]="true"> </app-button>
-  </div>
-</app-card>
+        <app-button
+          text="Delete"
+          variant="error"
+          (clicked)="deleteProduct('Product Name')"
+        />
+      </div>
+    </app-card>
+  </main>
+</div>
