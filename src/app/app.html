@@ -1,21 +1,30 @@
-<app-button text="Save" variant="primary" (clicked)="save()"> </app-button>
+<app-card>
+  <div card-title>Dashboard <b>Cool</b></div>
 
-<app-button text="Sec" variant="secondary"> </app-button>
+  <div card-content>
+    Welcome to the dashboard!
+    <br />
 
-<app-button text="Acc" variant="accent"> </app-button>
+    <app-button text="Save" variant="primary" (clicked)="save()"> </app-button>
 
-<app-button text="outline" variant="outline"> </app-button>
+    <app-button text="Sec" variant="secondary"> </app-button>
 
-<app-button text="Ghost" variant="ghost"> </app-button>
+    <app-button text="Acc" variant="accent"> </app-button>
 
-<app-button text="Delete" variant="error"> </app-button>
+    <app-button text="outline" variant="outline"> </app-button>
 
-<app-button text="Suc" variant="success"> </app-button>
+    <app-button text="Ghost" variant="ghost"> </app-button>
 
-<app-button text="Small" variant="primary" size="sm"> </app-button>
-<app-button text="Medium" variant="primary" size="md"> </app-button>
-<app-button text="Large" variant="primary" size="lg"> </app-button>
+    <app-button text="Delete" variant="error"> </app-button>
 
-<app-button text="Loading..." [loading]="true"> </app-button>
+    <app-button text="Suc" variant="success"> </app-button>
 
-<app-button text="Disabled" [disabled]="true"> </app-button>
+    <app-button text="Small" variant="primary" size="sm"> </app-button>
+    <app-button text="Medium" variant="primary" size="md"> </app-button>
+    <app-button text="Large" variant="primary" size="lg"> </app-button>
+
+    <app-button text="Loading..." [loading]="true"> </app-button>
+
+    <app-button text="Disabled" [disabled]="true"> </app-button>
+  </div>
+</app-card>
