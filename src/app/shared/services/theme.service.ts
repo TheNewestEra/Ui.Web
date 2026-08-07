@@ -11,8 +11,6 @@ export class ThemeService {
   constructor() {
     const saved = localStorage.getItem('theme') as Theme | null;
 
-    console.log('New theme: ' + saved);
-
     this.setTheme(saved ?? 'light');
   }
 
