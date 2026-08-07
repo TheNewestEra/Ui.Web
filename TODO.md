@@ -4,7 +4,7 @@
 
 ~~Navbar~~
 
-Layout component
+~~Layout component~~
 
 # Phase 4: Forms
 
