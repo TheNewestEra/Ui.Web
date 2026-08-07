@@ -122,7 +122,7 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add charts/backend/values.yaml
+          git add charts/ui-web/values.yaml
           if git diff --cached --quiet; then
             echo "No change, skipping commit"
             exit 0
