@@ -1,27 +1,7 @@
-<div class="min-h-screen bg-base-200">
-  <main class="container mx-auto px-6 py-8">
-    <app-page-header
-      title="Products"
-      subtitle="Some of your Products..."
-      buttonText="Add"
-      (buttonClicked)="createProduct()"
-    />
+<div class="flex min-h-screen bg-base-200">
+  <app-sidebar [items]="menuItems"> </app-sidebar>
 
-    <app-card>
-      <div card-title>Product Name</div>
-
-      <div card-content>
-        <p>Product description</p>
-        <p>Price</p>
-        <p>Date</p>
-        <br />
-
-        <app-button
-          text="Delete"
-          variant="error"
-          (clicked)="deleteProduct('Product Name')"
-        />
-      </div>
-    </app-card>
+  <main class="flex-1 p-8 overflow-auto">
+    <router-outlet />
   </main>
 </div>
