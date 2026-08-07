@@ -1,0 +1,16 @@
+<div
+  class="card bg-base-100"
+  [class.border]="bordered()"
+  [class.shadow-xl]="shadow()"
+  [class.card-compact]="compact()"
+>
+  <div class="card-body">
+    <h2 class="card-title">
+      <ng-content select="[card-title]"></ng-content>
+    </h2>
+
+    <div>
+      <ng-content select="[card-content]"></ng-content>
+    </div>
+  </div>
+</div>
