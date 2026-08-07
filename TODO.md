@@ -1,7 +1,9 @@
 # Phase 3: Build components
 
-Sidebar
+~~Sidebar~~
+
 Navbar
+
 Layout component
 
 # Phase 4: Forms
@@ -67,7 +69,7 @@ Pagination
 
 CrudPageComponent
 
-# Phase 9: Add Dockerfile
+# ~~Phase 9: Add Dockerfile~~
 
-- Dockerfile
-- GitHub Actions
+~~- Dockerfile~~
+~~- GitHub Actions~~

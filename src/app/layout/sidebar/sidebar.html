@@ -1,0 +1,39 @@
+<aside class="w-72 h-screen bg-base-100 border-r border-base-300 flex flex-col">
+  <div class="p-6 border-b border-base-300">
+    <h1 class="text-2xl font-bold">{{ title() }}</h1>
+  </div>
+
+  <nav class="flex-1 p-4">
+    <ul class="menu">
+      @for(item of items(); track item.route){
+
+      <li>
+        <a [routerLink]="item.route" routerLinkActive="menu-active">
+          <app-icon [name]="item.icon" />
+
+          {{ item.label }}
+        </a>
+      </li>
+
+      }
+    </ul>
+  </nav>
+
+  <div class="border-t border-base-300 p-5">
+    <div class="flex items-center gap-3">
+      <div class="avatar placeholder">
+        <div
+          class="bg-primary text-primary-content rounded-full w-10 flex justify-center items-center"
+        >
+          <app-icon name="circle-user" />
+        </div>
+      </div>
+
+      <div>
+        <div class="font-semibold">Admin</div>
+
+        <div class="text-sm opacity-70">Administrator</div>
+      </div>
+    </div>
+  </div>
+</aside>

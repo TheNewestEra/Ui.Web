@@ -1,20 +1,24 @@
 import { Component } from "@angular/core";
-import { ButtonComponent } from "@shared/components/button/button";
-import { CardComponent } from "@shared/components/card/card";
-import { PageHeaderComponent } from "@shared/ui/page-header/page-header";
+import { RouterOutlet } from "@angular/router";
+import { SidebarComponent, SidebarItem } from "@layout/sidebar/sidebar";
 
 @Component({
   selector: "app-root",
-  imports: [ButtonComponent, CardComponent, PageHeaderComponent],
+  imports: [SidebarComponent, RouterOutlet],
   templateUrl: "./app.html",
   styleUrl: "./app.css",
 })
 export class App {
-  createProduct() {
-    console.log("Add Product...");
-  }
-
-  deleteProduct(name: string) {
-    console.log("Deleting product: " + name);
-  }
+  menuItems: SidebarItem[] = [
+    {
+      label: "Dashboard",
+      icon: "layout-dashboard",
+      route: "/",
+    },
+    {
+      label: "Products",
+      icon: "shopping-basket",
+      route: "/products",
+    },
+  ];
 }
