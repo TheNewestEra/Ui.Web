@@ -11,11 +11,9 @@
 
   @if (showButton()) {
 
-  <app-button
-    [variant]="buttonVariant()"
-    (clicked)="buttonClicked.emit()"
-    [text]="buttonText()"
-  />
+  <app-button [variant]="buttonVariant()" (clicked)="buttonClicked.emit()">
+    {{buttonText()}}
+  </app-button>
 
   }
 </div>
