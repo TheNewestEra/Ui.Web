@@ -2,7 +2,7 @@
 
 ~~Sidebar~~
 
-Navbar
+~~Navbar~~
 
 Layout component
 

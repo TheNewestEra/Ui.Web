@@ -1,28 +1,36 @@
-import { Injectable, signal } from "@angular/core";
+import { Injectable, signal } from '@angular/core';
+
+export type Theme = 'light' | 'dark' | 'forest';
 
 @Injectable({
-  providedIn: "root",
+  providedIn: 'root',
 })
 export class ThemeService {
-  readonly theme = signal<"light" | "dark">("light");
+  readonly theme = signal<Theme>('light');
 
   constructor() {
-    const saved = localStorage.getItem("theme") as "light" | "dark" | null;
+    const saved = localStorage.getItem('theme') as Theme | null;
 
-    if (saved) {
-      this.setTheme(saved);
-    }
+    console.log('New theme: ' + saved);
+
+    this.setTheme(saved ?? 'light');
   }
 
-  toggleTheme() {
-    this.setTheme(this.theme() === "light" ? "dark" : "light");
+  toggleTheme(): void {
+    const nextTheme: Record<Theme, Theme> = {
+      light: 'dark',
+      dark: 'forest',
+      forest: 'light',
+    };
+
+    this.setTheme(nextTheme[this.theme()]);
   }
 
-  private setTheme(theme: "light" | "dark") {
+  private setTheme(theme: Theme) {
     this.theme.set(theme);
 
-    document.documentElement.setAttribute("data-theme", theme);
+    document.documentElement.setAttribute('data-theme', theme);
 
-    localStorage.setItem("theme", theme);
+    localStorage.setItem('theme', theme);
   }
 }
