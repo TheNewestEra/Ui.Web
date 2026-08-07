@@ -1,0 +1,19 @@
+<nav class="navbar bg-base-100 border-b border-base-300 px-6">
+  <div class="flex-none lg:hidden">
+    <label for="sidebar" class="btn btn-square btn-ghost">
+      <app-icon name="menu" />
+    </label>
+  </div>
+
+  <div class="flex-1"></div>
+
+  <div>
+    <app-button
+      variant="ghost"
+      size="sm"
+      [iconOnly]="true"
+      [leftIcon]="themeIcon()"
+      (clicked)="themeService.toggleTheme()"
+    />
+  </div>
+</nav>

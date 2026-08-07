@@ -5,11 +5,12 @@ import {
   input,
   output,
 } from "@angular/core";
+import { IconComponent } from "@shared/ui/icon/icon";
 
 @Component({
   selector: "app-button",
   standalone: true,
-  imports: [],
+  imports: [IconComponent],
   templateUrl: "./button.html",
   styleUrl: "./button.css",
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -34,6 +35,12 @@ export class ButtonComponent {
   disabled = input(false);
 
   clicked = output<void>();
+
+  leftIcon = input<string>();
+
+  rightIcon = input<string>();
+
+  iconOnly = input(false);
 
   classes = computed(() => {
     const variantClasses = {
