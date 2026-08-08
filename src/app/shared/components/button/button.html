@@ -1,14 +1,16 @@
 <button
-  type="button"
+  [type]="type()"
   [class]="classes()"
   [disabled]="disabled() || loading()"
   (click)="onClick()"
 >
   @if (leftIcon()) {
-  <app-icon [name]="leftIcon()!"> </app-icon>
-  } @if (!iconOnly()) {
-  <ng-content></ng-content>
-  } @if (rightIcon()) {
-  <app-icon [name]="rightIcon()!"> </app-icon>
+    <app-icon [name]="leftIcon()!"> </app-icon>
+  }
+  @if (!iconOnly()) {
+    <ng-content></ng-content>
+  }
+  @if (rightIcon()) {
+    <app-icon [name]="rightIcon()!"> </app-icon>
   }
 </button>

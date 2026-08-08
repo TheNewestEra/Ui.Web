@@ -8,8 +8,8 @@
 
 # Phase 4: Forms
 
-- Input
-- Select
+- ~~Input~~
+- ~~Select~~
 - Checkbox
 - Toggle
 - TextArea

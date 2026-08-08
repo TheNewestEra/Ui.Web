@@ -1,0 +1,17 @@
+<select
+  class="select w-full"
+  [value]="value"
+  [disabled]="disabled"
+  (change)="handleChange($event)"
+  (blur)="handleBlur()"
+>
+  <option value="" disabled>
+    {{ placeholder() }}
+  </option>
+
+  @for (option of options(); track option.value) {
+    <option [value]="option.value">
+      {{ option.label }}
+    </option>
+  }
+</select>
