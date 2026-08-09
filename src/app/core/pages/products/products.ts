@@ -11,6 +11,7 @@ import { PageHeaderComponent } from '@shared/ui/page-header/page-header';
   styleUrl: './products.css',
 })
 export class ProductsPage {
+  // TODO: Remove this file....
   createProduct() {
     console.log('Add Product...');
   }

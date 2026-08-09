@@ -25,16 +25,17 @@
     <div class="flex items-center gap-3">
       <div class="avatar placeholder">
         <div
-          class="bg-primary text-primary-content rounded-full w-10 flex justify-center items-center"
+          class="rounded-full w-10 flex justify-center items-center"
+          [style.background-color]="userState.color()"
         >
           <app-icon name="circle-user" />
         </div>
       </div>
 
       <div>
-        <div class="font-semibold">Admin</div>
+        <div class="font-semibold">{{ userState.displayName() }}</div>
 
-        <div class="text-sm opacity-70">Administrator</div>
+        <div class="text-sm opacity-70">{{ userState.isLoggedIn() ? 'Player' : 'Guest' }}</div>
       </div>
     </div>
   </div>

@@ -12,19 +12,28 @@ import { NavbarComponent } from '@layout/navbar/navbar';
 export class AppShellComponent {
   menuItems: SidebarItem[] = [
     {
+      // Welcome user
+      // leaderboard...
+      // last game I played
+      // if I didnt finish a game...
       label: 'Dashboard',
       icon: 'layout-dashboard',
       route: '/',
     },
     {
-      label: 'Products',
-      icon: 'shopping-basket',
-      route: '/products',
+      label: 'Games',
+      icon: 'gamepad-2',
+      route: '/games',
     },
     {
       label: 'Leaderboard',
       icon: 'trophy',
       route: '/leaderboard',
+    },
+    {
+      label: 'Account',
+      icon: 'user-round-cog',
+      route: '/account',
     },
   ];
 }
