@@ -21,5 +21,10 @@ export class AppShellComponent {
       icon: 'shopping-basket',
       route: '/products',
     },
+    {
+      label: 'Leaderboard',
+      icon: 'trophy',
+      route: '/leaderboard',
+    },
   ];
 }

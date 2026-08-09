@@ -23,21 +23,4 @@
       </app-button>
     </div>
   </app-card>
-
-  <app-table
-    [columns]="columns"
-    [data]="products"
-    [striped]="true"
-    [rowHighlight]="isCurrentUser"
-    emptyMessage="No products found."
-    [loading]="loading"
-    [showRowNumbers]="false"
-    [showRank]="true"
-    [maxRows]="1"
-    [sort]="{
-      key: 'price',
-      direction: 'asc',
-    }"
-    [extraRow]="isCurrentUser"
-  />
 </app-page-layout>
