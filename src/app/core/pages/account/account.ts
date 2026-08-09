@@ -145,8 +145,4 @@ export class AccountPage {
         },
       });
   }
-
-  getMe() {
-    return this.accountsService.apiMeGet();
-  }
 }
