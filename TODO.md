@@ -22,12 +22,12 @@
 
 Data table
 
-- Sorting
+- ~~Sorting~~
 - Pagination
 - Search
 - Actions
 
-Empty state
+~~Empty state~~
 
 Loading Spinner
 
