@@ -19,6 +19,7 @@ export class AppShellComponent {
       label: 'Dashboard',
       icon: 'layout-dashboard',
       route: '/',
+      requiresAuth: true,
     },
     {
       label: 'Games',

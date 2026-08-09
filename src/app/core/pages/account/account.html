@@ -5,8 +5,23 @@
   />
 
   <section class="flex flex-col space-y-6">
+    @if (userState.isLoggedIn()) {
+      <!-- Logged-in view -->
+      <app-card>
+        <div card-title>Your account</div>
+        <div card-content>
+          <p>
+            Logged in as <b>{{ userState.displayName() }}</b>
+          </p>
+
+          <p class="mt-2">Your account is ready to use with friends.</p>
+          <app-button class="mt-6" variant="error" (clicked)="logout()"> Log Out </app-button>
+        </div>
+      </app-card>
+    }
+
     <!-- Create an Account form -->
-    @if (!registrationComplete()) {
+    @if (!registrationComplete() && !userState.isLoggedIn()) {
       <app-card>
         <div card-title>Create an account</div>
 
@@ -40,7 +55,8 @@
           >
         </form>
       </app-card>
-    } @else {
+    }
+    @if (registrationComplete()) {
       <app-card>
         <div card-title>Account created</div>
 
@@ -64,36 +80,40 @@
       </app-card>
     }
 
-    <!-- Login form -->
-    <app-card>
-      <div card-title>Log in</div>
+    @if (!userState.isLoggedIn()) {
+      <!-- Login form -->
+      <app-card>
+        <div card-title>Log in</div>
 
-      <form
-        card-content
-        [formGroup]="loginForm"
-        (ngSubmit)="login()"
-        class="flex flex-col space-y-6"
-      >
-        <app-form-field label="Username" [control]="loginForm.controls.username">
-          <app-input formControlName="username" placeholder="Username" />
-        </app-form-field>
+        <form
+          card-content
+          [formGroup]="loginForm"
+          (ngSubmit)="login()"
+          class="flex flex-col space-y-6"
+        >
+          <app-form-field label="Username" [control]="loginForm.controls.username">
+            <app-input formControlName="username" placeholder="Username" />
+          </app-form-field>
 
-        <app-form-field label="Code" [control]="loginForm.controls.code">
-          <app-input formControlName="code" placeholder="6-digit code" />
-        </app-form-field>
+          <app-form-field label="Code" [control]="loginForm.controls.code">
+            <app-input formControlName="code" placeholder="6-digit code" />
+          </app-form-field>
 
-        @if (loginErrorMessage()) {
-          <div class="alert alert-error">
-            <app-icon name="circle-alert" />
+          @if (loginErrorMessage()) {
+            <div class="alert alert-error">
+              <app-icon name="circle-alert" />
 
-            <span>
-              {{ loginErrorMessage() }}
-            </span>
-          </div>
-        }
+              <span>
+                {{ loginErrorMessage() }}
+              </span>
+            </div>
+          }
 
-        <app-button type="submit" variant="primary" [loading]="loginLoading()"> Log in </app-button>
-      </form>
-    </app-card>
+          <app-button type="submit" variant="primary" [loading]="loginLoading()">
+            Log in
+          </app-button>
+        </form>
+      </app-card>
+    }
   </section>
 </app-page-layout>

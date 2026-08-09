@@ -6,9 +6,14 @@ import { ButtonComponent } from '@shared/components/button/button';
 import { FormFieldComponent } from '@shared/components/form/form-field/form-field';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { InputComponent } from '@shared/components/form/input/input';
-import { UserApiService } from '@core/services/user-api.service';
 import { UserStateService } from '@core/services/user-state.service';
 import { IconComponent } from '@shared/ui/icon/icon';
+import {
+  AccountRegisterPost200Response,
+  AccountService,
+  ApiMeGet200Response,
+} from '@thenewestera/accounts-ng';
+import { finalize } from 'rxjs';
 
 @Component({
   selector: 'app-account',
@@ -26,9 +31,13 @@ import { IconComponent } from '@shared/ui/icon/icon';
   styleUrl: './account.css',
 })
 export class AccountPage {
-  private readonly userApiService = inject(UserApiService);
+  private readonly accountsService = inject(AccountService);
   private readonly userStateService = inject(UserStateService);
   private readonly fb = inject(FormBuilder);
+
+  readonly userState = inject(UserStateService);
+
+  readonly logoutLoading = signal(false);
 
   readonly registerLoading = signal(false);
   readonly registrationCode = signal<string | null>(null);
@@ -46,9 +55,7 @@ export class AccountPage {
   });
 
   register(): void {
-    if (this.registerLoading()) {
-      return;
-    }
+    if (this.registerLoading()) return;
 
     if (this.registerForm.invalid) {
       this.registerForm.markAllAsTouched();
@@ -60,31 +67,31 @@ export class AccountPage {
     this.registerLoading.set(true);
     this.registerErrorMessage.set(null);
 
-    this.userApiService.register(username).subscribe({
-      next: (response) => {
-        this.userStateService.register({
-          id: response.user.id,
-          username,
-        });
+    this.accountsService
+      .accountRegisterPost({ username })
+      .pipe(
+        finalize(() => {
+          this.registerLoading.set(false);
+        }),
+      )
+      .subscribe({
+        next: (response: AccountRegisterPost200Response) => {
+          if (response.user) {
+            this.userStateService.setUser(response.user);
+            this.registrationCode.set(response.code);
+          }
+        },
 
-        this.registrationCode.set(response.code);
-        this.registerLoading.set(false);
-      },
-
-      error: (error) => {
-        this.registerErrorMessage.set(
-          error?.error?.error ?? 'Something went wrong. Please try again.',
-        );
-
-        this.registerLoading.set(false);
-      },
-    });
+        error: (error) => {
+          this.registerErrorMessage.set(
+            error?.error?.error ?? 'Something went wrong. Please try again.',
+          );
+        },
+      });
   }
 
   login(): void {
-    if (this.loginLoading()) {
-      return;
-    }
+    if (this.loginLoading()) return;
 
     if (this.loginForm.invalid) {
       this.loginForm.markAllAsTouched();
@@ -96,23 +103,50 @@ export class AccountPage {
     this.loginLoading.set(true);
     this.loginErrorMessage.set(null);
 
-    this.userApiService.login(username, code).subscribe({
-      next: (response) => {
-        this.userStateService.login({
-          id: response.user.id,
-          username,
-        });
+    this.accountsService
+      .accountLoginPost({ username, code })
+      .pipe(
+        finalize(() => {
+          this.loginLoading.set(false);
+        }),
+      )
+      .subscribe({
+        next: (response: ApiMeGet200Response) => {
+          if (response.user) this.userStateService.setUser(response.user);
+        },
 
-        this.loginLoading.set(false);
-      },
+        error: (error) => {
+          this.loginErrorMessage.set(
+            error?.error?.error ?? 'Something went wrong. Please try again.',
+          );
+        },
+      });
+  }
 
-      error: (error) => {
-        this.loginErrorMessage.set(
-          error?.error?.error ?? 'Something went wrong. Please try again.',
-        );
+  logout(): void {
+    if (this.logoutLoading()) return;
 
-        this.loginLoading.set(false);
-      },
-    });
+    this.logoutLoading.set(true);
+
+    this.accountsService
+      .accountLogoutPost()
+      .pipe(
+        finalize(() => {
+          this.logoutLoading.set(false);
+        }),
+      )
+      .subscribe({
+        next: () => {
+          this.userState.logout();
+        },
+
+        error: () => {
+          this.userState.logout();
+        },
+      });
+  }
+
+  getMe() {
+    return this.accountsService.apiMeGet();
   }
 }

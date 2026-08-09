@@ -5,7 +5,7 @@
 
   <nav class="flex-1 p-4">
     <ul class="menu bg-transparent w-full">
-      @for (item of items(); track item.route) {
+      @for (item of visibleItems(); track item.route) {
         <li>
           <a
             [routerLink]="item.route"

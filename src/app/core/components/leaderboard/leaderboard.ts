@@ -1,9 +1,11 @@
 import { Component, OnInit, inject, input } from '@angular/core';
 import { TableColumn, TableComponent } from '@shared/components/data/table/table';
-import { LeaderboardResponse } from '@core/models/leaderboard-response.interface';
-import { LeaderboardEntryResponse } from '@core/models/leaderboard-entry-response.interface';
-import { LeaderboardService } from '@core/services/leaderboard.service';
 import { CardComponent } from '@shared/components/card/card';
+import {
+  ApiLeaderboardGet200Response,
+  LeaderboardEntry,
+  LeaderboardService,
+} from '@thenewestera/leaderboard-ng';
 
 @Component({
   selector: 'app-leaderboard',
@@ -16,7 +18,7 @@ export class LeaderboardComponent implements OnInit {
 
   showHeading = input(false);
 
-  leaderboard: LeaderboardEntryResponse[] = [];
+  leaderboard: LeaderboardEntry[] = [];
   me: any = null;
 
   loading = false;
@@ -43,8 +45,9 @@ export class LeaderboardComponent implements OnInit {
   loadLeaderboard(): void {
     this.loading = true;
 
-    this.leaderboardService.getLeaderboard().subscribe({
-      next: (leaderboardResponse) => {
+    // TODO: use the query parameters for kind and period
+    this.leaderboardService.apiLeaderboardGet().subscribe({
+      next: (leaderboardResponse: ApiLeaderboardGet200Response) => {
         this.leaderboard = leaderboardResponse.entries;
         this.loading = false;
       },
@@ -57,7 +60,7 @@ export class LeaderboardComponent implements OnInit {
   }
 
   isCurrentUser = (row: unknown): boolean => {
-    const entry = row as LeaderboardResponse;
+    const entry = row as LeaderboardEntry;
 
     return entry === this.me;
   };

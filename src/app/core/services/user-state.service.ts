@@ -1,17 +1,7 @@
 import { computed, Injectable, signal } from '@angular/core';
-
-export interface User {
-  id: string;
-  username: string;
-}
-
-interface StoredUser {
-  id: string;
-  username: string;
-}
+import { User } from '@thenewestera/accounts-ng';
 
 const STORAGE_KEY = 'escape-ai-user';
-const DEVICE_COLOR_STORAGE_KEY = 'escape-ai-device-color';
 
 @Injectable({
   providedIn: 'root',
@@ -19,22 +9,18 @@ const DEVICE_COLOR_STORAGE_KEY = 'escape-ai-device-color';
 export class UserStateService {
   private readonly _user = signal<User | null>(this.loadUser());
 
-  private readonly _deviceColor = signal(this.loadDeviceColor());
-
   readonly user = this._user.asReadonly();
 
-  readonly isLoggedIn = signal(this._user() !== null);
+  readonly isLoggedIn = computed(() => this._user() !== null);
 
   readonly displayName = computed(() => this._user()?.username ?? 'Guest');
 
-  readonly color = this._deviceColor.asReadonly();
+  readonly color = computed(() => this._user()?.color ?? this.generateUserColor());
 
-  register(user: User): void {
-    this.setUser(user);
-  }
+  setUser(user: User) {
+    this._user.set(user);
 
-  login(user: User): void {
-    this.setUser(user);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
   }
 
   logout(): void {
@@ -43,30 +29,10 @@ export class UserStateService {
     localStorage.removeItem(STORAGE_KEY);
   }
 
-  private loadDeviceColor(): string {
-    const stored = localStorage.getItem(DEVICE_COLOR_STORAGE_KEY);
-
-    if (stored) {
-      return stored;
-    }
-
-    const color = this.generateUserColor();
-
-    localStorage.setItem(DEVICE_COLOR_STORAGE_KEY, color);
-
-    return color;
-  }
-
   private generateUserColor(): string {
     const hue = Math.floor(Math.random() * 360);
 
     return `hsl(${hue}, 70%, 55%)`;
-  }
-
-  private setUser(user: User) {
-    this._user.set(user);
-
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
   }
 
   private loadUser(): User | null {
@@ -75,7 +41,7 @@ export class UserStateService {
     if (!stored) return null;
 
     try {
-      return JSON.parse(stored) as StoredUser;
+      return JSON.parse(stored) as User;
     } catch {
       localStorage.removeItem(STORAGE_KEY);
       return null;
