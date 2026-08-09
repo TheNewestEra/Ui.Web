@@ -1,17 +1,20 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, input } from '@angular/core';
 import { TableColumn, TableComponent } from '@shared/components/data/table/table';
 import { LeaderboardResponse } from '@core/models/leaderboard-response.interface';
 import { LeaderboardEntryResponse } from '@core/models/leaderboard-entry-response.interface';
 import { LeaderboardService } from '@core/services/leaderboard.service';
+import { CardComponent } from '@shared/components/card/card';
 
 @Component({
   selector: 'app-leaderboard',
-  imports: [TableComponent],
+  imports: [TableComponent, CardComponent],
   templateUrl: './leaderboard.html',
   styleUrl: './leaderboard.css',
 })
 export class LeaderboardComponent implements OnInit {
   private readonly leaderboardService = inject(LeaderboardService);
+
+  showHeading = input(false);
 
   leaderboard: LeaderboardEntryResponse[] = [];
   me: any = null;

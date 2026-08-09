@@ -1,16 +1,23 @@
-<app-table
-  [columns]="columns"
-  [data]="leaderboard"
-  [striped]="true"
-  [rowHighlight]="isCurrentUser"
-  emptyMessage="No leaderboard found."
-  [loading]="loading"
-  [showRowNumbers]="false"
-  [showRank]="false"
-  [maxRows]="2"
-  [sort]="{
-    key: 'price',
-    direction: 'desc',
-  }"
-  [extraRow]="isCurrentUser"
-/>
+<app-card>
+  @if (showHeading()) {
+    <div card-title>Leaderboard</div>
+  }
+
+  <app-table
+    card-content
+    [columns]="columns"
+    [data]="leaderboard"
+    [striped]="true"
+    [rowHighlight]="isCurrentUser"
+    emptyMessage="No leaderboard found."
+    [loading]="loading"
+    [showRowNumbers]="false"
+    [showRank]="false"
+    [maxRows]="2"
+    [sort]="{
+      key: 'price',
+      direction: 'desc',
+    }"
+    [extraRow]="isCurrentUser"
+  />
+</app-card>
