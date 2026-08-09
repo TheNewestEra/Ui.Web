@@ -1,11 +1,18 @@
-import { Component, input } from '@angular/core';
-import { AbstractControl, FormControl } from '@angular/forms';
+import { ChangeDetectionStrategy, Component, forwardRef, input } from '@angular/core';
+import { AbstractControl, ControlContainer, FormControl, FormGroupDirective } from '@angular/forms';
 
 @Component({
   selector: 'app-form-field',
   standalone: true,
   templateUrl: './form-field.html',
   styleUrl: './form-field.css',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  viewProviders: [
+    {
+      provide: ControlContainer,
+      useExisting: forwardRef(() => FormGroupDirective),
+    },
+  ],
 })
 export class FormFieldComponent {
   label = input.required<string>();
