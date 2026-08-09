@@ -9,13 +9,14 @@
       <!-- Logged-in view -->
       <app-card>
         <div card-title>Your account</div>
-        <div card-content>
+        <div card-content class="flex flex-col space-y-3">
           <p>
             Logged in as <b>{{ userState.displayName() }}</b>
           </p>
 
-          <p class="mt-2">Your account is ready to use with friends.</p>
-          <app-button class="mt-6" variant="error" (clicked)="logout()"> Log Out </app-button>
+          <p class="text-base-content/70">Your account is ready to use with friends.</p>
+
+          <app-button variant="error" (clicked)="logout()"> Log Out </app-button>
         </div>
       </app-card>
     }
