@@ -1,0 +1,15 @@
+<form [formGroup]="productForm" (ngSubmit)="save()" class="flex flex-col space-y-6">
+  <app-form-field label="Product Name" [control]="productForm.controls.name">
+    <app-input formControlName="name" placeholder="Enter product name" />
+  </app-form-field>
+
+  <app-form-field label="Price" [control]="productForm.controls.price">
+    <app-input type="number" formControlName="price" placeholder="Enter price" />
+  </app-form-field>
+
+  <app-form-field label="Category" [control]="productForm.controls.category">
+    <app-select formControlName="category" [options]="categories" />
+  </app-form-field>
+
+  <app-button type="submit" variant="primary">Save</app-button>
+</form>

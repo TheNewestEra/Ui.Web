@@ -4,17 +4,19 @@
   </div>
 
   <nav class="flex-1 p-4">
-    <ul class="menu">
-      @for(item of items(); track item.route){
+    <ul class="menu bg-transparent w-full">
+      @for (item of items(); track item.route) {
+        <li>
+          <a
+            [routerLink]="item.route"
+            routerLinkActive="bg-primary text-primary-content"
+            [routerLinkActiveOptions]="{ exact: true }"
+          >
+            <app-icon [name]="item.icon" />
 
-      <li>
-        <a [routerLink]="item.route" routerLinkActive="menu-active">
-          <app-icon [name]="item.icon" />
-
-          {{ item.label }}
-        </a>
-      </li>
-
+            {{ item.label }}
+          </a>
+        </li>
       }
     </ul>
   </nav>

@@ -8,8 +8,8 @@
 
 # Phase 4: Forms
 
-- Input
-- Select
+- ~~Input~~
+- ~~Select~~
 - Checkbox
 - Toggle
 - TextArea
@@ -22,12 +22,12 @@
 
 Data table
 
-- Sorting
+- ~~Sorting~~
 - Pagination
 - Search
 - Actions
 
-Empty state
+~~Empty state~~
 
 Loading Spinner
 

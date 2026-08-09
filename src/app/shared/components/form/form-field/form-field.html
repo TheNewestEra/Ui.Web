@@ -1,0 +1,29 @@
+<div class="form-control w-full space-y-2">
+  <label class="label">
+    <span class="label-text font-medium">
+      {{ label() }}
+
+      @if (isRequired) {
+        <span class="text-error">*</span>
+      }
+    </span>
+  </label>
+
+  <ng-content />
+
+  @if (hint() && !showError) {
+    <label class="label">
+      <span class="label-text-alt">
+        {{ hint() }}
+      </span>
+    </label>
+  }
+
+  @if (showError) {
+    <label class="label">
+      <span class="label-text-alt text-error">
+        {{ errorMessage }}
+      </span>
+    </label>
+  }
+</div>
