@@ -1,14 +1,37 @@
 import { Component, input } from "@angular/core";
 import { LucideAngularModule } from "lucide-angular";
-import * as allIcons from "lucide-angular"; // Import everything
+import {
+  CircleAlert,
+  CircleUser,
+  Gamepad2,
+  Info,
+  LayoutDashboard,
+  Menu,
+  Moon,
+  Sun,
+  Trees,
+  Trophy,
+  UserRoundCog,
+} from "lucide-angular";
 
-// Safely cast to strip out the incompatible TypeScript types
-const lucideRegistry = allIcons as any;
+const usedIcons = {
+  CircleAlert,
+  CircleUser,
+  Gamepad2,
+  Info,
+  LayoutDashboard,
+  Menu,
+  Moon,
+  Sun,
+  Trees,
+  Trophy,
+  UserRoundCog,
+};
 
 @Component({
   selector: "app-icon",
   standalone: true,
-  providers: [LucideAngularModule.pick(lucideRegistry).providers!],
+  providers: [LucideAngularModule.pick(usedIcons).providers!],
   imports: [LucideAngularModule],
   templateUrl: "./icon.html",
   styleUrl: "./icon.css",
