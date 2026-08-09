@@ -23,4 +23,12 @@
       </app-button>
     </div>
   </app-card>
+
+  <app-table
+    [columns]="columns"
+    [data]="products"
+    [striped]="true"
+    [rowHighlight]="isCurrentUser"
+    emptyMessage="No products found."
+  />
 </app-page-layout>
