@@ -27,6 +27,11 @@ export class AppShellComponent {
       route: '/games',
     },
     {
+      label: 'Browse',
+      icon: 'layout-grid',
+      route: '/browse',
+    },
+    {
       label: 'Leaderboard',
       icon: 'trophy',
       route: '/leaderboard',

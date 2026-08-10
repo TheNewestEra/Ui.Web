@@ -26,7 +26,10 @@ export const routes: Routes = [
           },
         ],
       },
-
+      {
+        path: 'browse',
+        loadComponent: () => import('@core/pages/browse/browse').then((m) => m.BrowsePage),
+      },
       {
         path: 'dashboard',
         component: DashboardPage,

@@ -8,7 +8,7 @@
   </div>
 
   @if (showButton()) {
-    <app-button [variant]="buttonVariant()" (clicked)="buttonClicked.emit()">
+    <app-button (clicked)="buttonClicked.emit()" [variant]="buttonVariant()">
       {{ buttonText() }}
     </app-button>
   }

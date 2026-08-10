@@ -23,8 +23,7 @@ import {
   PuzzleStateMessage,
   PuzzleStatusMessage,
 } from '@core/models/piece-puzzle-socket.interface';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { toObservable } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { ButtonComponent } from '@shared/components/button/button';
 
 @Component({
@@ -288,7 +287,9 @@ export class PiecePuzzleGamePage {
     });
   }
 
-  private loadPuzzleImage(game: Puzzle): void {
+  private loadPuzzleImage(game: Puzzle | null): void {
+    if (game === null) return;
+
     if (game.status == PuzzleStatus.Queued) return;
 
     if (game.status == PuzzleStatus.Generating) return;
@@ -308,7 +309,8 @@ export class PiecePuzzleGamePage {
     });
   }
 
-  private updateTimers(puzzle: Puzzle): void {
+  private updateTimers(puzzle: Puzzle | null): void {
+    if (puzzle === null) return;
     this.stopTimer();
 
     if (puzzle.status === PuzzleStatus.Waiting) {

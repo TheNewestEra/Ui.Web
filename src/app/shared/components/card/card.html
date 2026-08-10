@@ -4,6 +4,10 @@
   [class.shadow-xl]="shadow()"
   [class.card-compact]="compact()"
 >
+  <figure>
+    <ng-content select="[card-image]" />
+  </figure>
+
   <div class="card-body">
     <h2 class="card-title">
       <ng-content select="[card-title]" />
