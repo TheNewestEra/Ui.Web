@@ -7,7 +7,7 @@ import {
   PiecePuzzleService,
   Puzzle,
   PuzzlesIdMovePostRequest,
-  PuzzleStatusEnum,
+  PuzzleStatus,
 } from '@thenewestera/puzzle-ng';
 import { IconComponent } from '@shared/ui/icon/icon';
 import { ErrorAlertComponent } from '@shared/components/alert/error/error';
@@ -36,7 +36,7 @@ export class PiecePuzzleGamePage {
   private readonly piecePuzzleService = inject(PiecePuzzleService);
   private readonly userStateService = inject(UserStateService);
 
-  readonly PuzzleStatusEnum = PuzzleStatusEnum;
+  readonly PuzzleStatus = PuzzleStatus;
 
   readonly gameId = this.route.snapshot.paramMap.get('gameId');
   readonly game = signal<Puzzle | null>(null);
@@ -57,7 +57,7 @@ export class PiecePuzzleGamePage {
   readonly gameEnded = computed(() => {
     const status = this.game()?.status;
 
-    return status === PuzzleStatusEnum.Solved || status === PuzzleStatusEnum.Timeout;
+    return status === PuzzleStatus.Solved || status === PuzzleStatus.Timeout;
   });
 
   private timerInterval?: ReturnType<typeof setInterval>;
@@ -148,7 +148,7 @@ export class PiecePuzzleGamePage {
   }
 
   private joinPuzzle(game: Puzzle): void {
-    if (game.status === PuzzleStatusEnum.Waiting) {
+    if (game.status === PuzzleStatus.Waiting) {
       const hostToken = sessionStorage.getItem('piecePuzzleHostToken') ?? '';
 
       this.piecePuzzleService.puzzlesIdJoinPost(this.gameId!, { player: hostToken }).subscribe({
@@ -166,9 +166,9 @@ export class PiecePuzzleGamePage {
   }
 
   private loadPuzzleImage(game: Puzzle): void {
-    if (game.status == PuzzleStatusEnum.Queued) return;
+    if (game.status == PuzzleStatus.Queued) return;
 
-    if (game.status == PuzzleStatusEnum.Generating) return;
+    if (game.status == PuzzleStatus.Generating) return;
 
     if (this.puzzleImage()) return;
 
@@ -223,7 +223,7 @@ export class PiecePuzzleGamePage {
         ...game,
         board: response.board,
         score: response.score,
-        status: PuzzleStatusEnum.Timeout,
+        status: response.status,
       };
     });
 

@@ -22,7 +22,7 @@
       </app-error-alert>
     } @else if (game(); as game) {
       <!-- Status -->
-      @if (game.status === PuzzleStatusEnum.Waiting) {
+      @if (game.status === PuzzleStatus.Waiting) {
         <div class="alert alert-info">
           <app-icon name="users" />
 
@@ -34,7 +34,7 @@
         </div>
       }
 
-      @if (game.status === PuzzleStatusEnum.Queued) {
+      @if (game.status === PuzzleStatus.Queued) {
         <div class="alert alert-info">
           <span class="loading loading-spinner loading-sm"></span>
 
@@ -42,7 +42,7 @@
         </div>
       }
 
-      @if (game.status === PuzzleStatusEnum.Error) {
+      @if (game.status === PuzzleStatus.Error) {
         <app-error-alert>
           {{ game.error || 'Something went wrong.' }}
         </app-error-alert>
@@ -94,14 +94,14 @@
                 <div class="w-full overflow-hidden rounded-box">
                   <img
                     [src]="image"
-                    [alt]="game?.status === PuzzleStatusEnum.Solved ? 'Completed puzzle' : 'Puzzle'"
+                    [alt]="game?.status === PuzzleStatus.Solved ? 'Completed puzzle' : 'Puzzle'"
                     class="block w-full"
                   />
                 </div>
               }
 
               <div class="flex flex-col items-center gap-2 text-center">
-                @if (game?.status === PuzzleStatusEnum.Solved) {
+                @if (game?.status === PuzzleStatus.Solved) {
                   <div class="badge badge-success gap-2">
                     <app-icon name="circle-check" />
                     Solved!
@@ -110,7 +110,7 @@
                   <h2 class="text-2xl font-bold">Puzzle Complete</h2>
 
                   <p class="text-base-content/60">Nice work!</p>
-                } @else if (game?.status === PuzzleStatusEnum.Timeout) {
+                } @else if (game?.status === PuzzleStatus.Timeout) {
                   <div class="badge badge-warning gap-2">
                     <app-icon name="clock" />
                     Time's Up
