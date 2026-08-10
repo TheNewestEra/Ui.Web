@@ -1,4 +1,5 @@
 import { Injectable, signal } from '@angular/core';
+import { WS_BASE_URL } from '@core/constants/base-urls.constants';
 import { PuzzleSocketMessage } from '@core/models/piece-puzzle-socket.interface';
 import { Subject } from 'rxjs';
 
@@ -17,9 +18,7 @@ export class PiecePuzzleSocketService {
   connect(gameId: string): void {
     this.disconnect();
 
-    const baseUrl = 'wss://api.puzzle.ryanb.co.za';
-
-    const url = `${baseUrl}/puzzles/${gameId}/ws`;
+    const url = `${WS_BASE_URL.PUZZLE}/puzzles/${gameId}/ws`;
 
     this.socket = new WebSocket(url);
 

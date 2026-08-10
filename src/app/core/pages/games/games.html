@@ -12,7 +12,7 @@
       <form
         card-content
         [formGroup]="guessForm"
-        (ngSubmit)="guess()"
+        (ngSubmit)="guessPrompt()"
         class="flex flex-col space-y-6"
       >
         <app-form-field label="Theme" [control]="guessForm.controls.theme">

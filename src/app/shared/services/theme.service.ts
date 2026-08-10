@@ -1,4 +1,5 @@
 import { Injectable, signal } from '@angular/core';
+import { LOCAL_STORAGE_KEYS } from '@core/constants/local-storage-keys.constants';
 
 export type Theme = 'light' | 'dark' | 'forest';
 
@@ -9,7 +10,7 @@ export class ThemeService {
   readonly theme = signal<Theme>('light');
 
   constructor() {
-    const saved = localStorage.getItem('theme') as Theme | null;
+    const saved = localStorage.getItem(LOCAL_STORAGE_KEYS.THEME) as Theme | null;
 
     this.setTheme(saved ?? 'light');
   }
@@ -29,6 +30,6 @@ export class ThemeService {
 
     document.documentElement.setAttribute('data-theme', theme);
 
-    localStorage.setItem('theme', theme);
+    localStorage.setItem(LOCAL_STORAGE_KEYS.THEME, theme);
   }
 }

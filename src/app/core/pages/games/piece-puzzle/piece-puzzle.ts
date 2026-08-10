@@ -26,6 +26,7 @@ import {
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { ButtonComponent } from '@shared/components/button/button';
 import { InfoAlertComponent } from '@shared/components/alert/info/info';
+import { LOCAL_STORAGE_KEYS } from '@core/constants/local-storage-keys.constants';
 
 @Component({
   selector: 'app-piece-puzzle',
@@ -121,7 +122,7 @@ export class PiecePuzzleGamePage {
   startGame(): void {
     if (!this.gameId) return;
 
-    const hostToken = sessionStorage.getItem('piecePuzzleHostToken') ?? '';
+    const hostToken = sessionStorage.getItem(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_HOST_TOKEN) ?? '';
 
     this.piecePuzzleService.puzzlesIdStartPost(this.gameId, { hostToken }).subscribe({
       error: (error) => {
@@ -371,8 +372,8 @@ export class PiecePuzzleGamePage {
     const moveRequest: PuzzlesIdMovePostRequest = {
       cellA: cellA,
       cellB: cellB,
-      participantId: sessionStorage.getItem('participantId') ?? '',
-      token: sessionStorage.getItem('token') ?? '',
+      participantId: sessionStorage.getItem(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_PARTICIPANT_ID) ?? '',
+      token: sessionStorage.getItem(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_TOKEN) ?? '',
     };
 
     this.piecePuzzleService

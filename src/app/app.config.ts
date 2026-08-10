@@ -12,6 +12,7 @@ import { provideApi as provideGuessApi } from '@thenewestera/guess-ng';
 import { provideApi as providePuzzleApi } from '@thenewestera/puzzle-ng';
 import { provideApi as provideBrowseApi } from '@thenewestera/browse-ng';
 import { provideApi as provideFriendsApi } from '@thenewestera/friends-ng';
+import { BASE_URL } from '@core/constants/base-urls.constants';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -21,27 +22,27 @@ export const appConfig: ApplicationConfig = {
     provideHttpClient(),
     provideLeaderboardApi({
       withCredentials: true,
-      basePath: 'https://api.leaderboard.ryanb.co.za',
+      basePath: BASE_URL.LEADERBOARD,
     }),
     provideAccountsApi({
       withCredentials: true,
-      basePath: 'https://api.accounts.ryanb.co.za',
+      basePath: BASE_URL.ACCOUNTS,
     }),
     provideGuessApi({
       withCredentials: true,
-      basePath: 'https://api.guess.ryanb.co.za',
+      basePath: BASE_URL.GUESS,
     }),
     providePuzzleApi({
       withCredentials: true,
-      basePath: 'https://api.puzzle.ryanb.co.za',
+      basePath: BASE_URL.PUZZLE,
     }),
     provideBrowseApi({
       withCredentials: true,
-      basePath: 'https://api.browse.ryanb.co.za',
+      basePath: BASE_URL.BROWSE,
     }),
     provideFriendsApi({
       withCredentials: true,
-      basePath: 'https://api.friends.ryanb.co.za',
+      basePath: BASE_URL.FRIENDS,
     }),
   ],
 };

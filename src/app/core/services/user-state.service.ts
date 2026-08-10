@@ -1,7 +1,6 @@
 import { computed, Injectable, signal } from '@angular/core';
+import { LOCAL_STORAGE_KEYS } from '@core/constants/local-storage-keys.constants';
 import { User } from '@thenewestera/accounts-ng';
-
-const STORAGE_KEY = 'escape-ai-user';
 
 @Injectable({
   providedIn: 'root',
@@ -20,13 +19,13 @@ export class UserStateService {
   setUser(user: User) {
     this._user.set(user);
 
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
+    localStorage.setItem(LOCAL_STORAGE_KEYS.STORAGE_KEY, JSON.stringify(user));
   }
 
   logout(): void {
     this._user.set(null);
 
-    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(LOCAL_STORAGE_KEYS.STORAGE_KEY);
   }
 
   private generateUserColor(): string {
@@ -36,14 +35,14 @@ export class UserStateService {
   }
 
   private loadUser(): User | null {
-    const stored = localStorage.getItem(STORAGE_KEY);
+    const stored = localStorage.getItem(LOCAL_STORAGE_KEYS.STORAGE_KEY);
 
     if (!stored) return null;
 
     try {
       return JSON.parse(stored) as User;
     } catch {
-      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(LOCAL_STORAGE_KEYS.STORAGE_KEY);
       return null;
     }
   }
