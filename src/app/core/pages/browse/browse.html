@@ -1,0 +1,141 @@
+<app-page-layout>
+  <app-page-header
+    title="Browse Games"
+    subtitle="See what everyone else has been generating — filter by type, sort by rating, and jump in."
+  />
+
+  <form [formGroup]="filterForm" class="flex flex-wrap gap-4">
+    <div class="w-full sm:w-56">
+      <app-form-field label="Game type" [control]="filterForm.controls.kind">
+        <app-select formControlName="kind" [options]="kindOptions" />
+      </app-form-field>
+    </div>
+
+    <div class="w-full sm:w-56">
+      <app-form-field label="Sort by" [control]="filterForm.controls.sort">
+        <app-select formControlName="sort" [options]="sortOptions" />
+      </app-form-field>
+    </div>
+  </form>
+
+  @if (errorMessage()) {
+    <div class="alert alert-error">
+      <app-icon name="circle-alert" />
+
+      <span>{{ errorMessage() }}</span>
+
+      <app-button variant="ghost" size="sm" leftIcon="refresh-cw" (clicked)="load()">
+        Retry
+      </app-button>
+    </div>
+  } @else if (loading()) {
+    <div class="flex justify-center p-16">
+      <span class="loading loading-spinner loading-lg"></span>
+    </div>
+  } @else if (entries().length === 0) {
+    <div class="flex flex-col items-center gap-3 p-16 text-base-content/60">
+      <app-icon name="inbox" />
+
+      <p>No games found. Try a different filter.</p>
+    </div>
+  } @else {
+    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      @for (entry of entries(); track entry.id) {
+        <app-card [compact]="true">
+          <div
+            card-image
+            class="flex h-40 w-full items-center justify-center bg-base-200 text-base-content/30"
+          >
+            @if (entry.thumbnailUrl) {
+              <img
+                [src]="thumbnailSrc(entry)"
+                [alt]="entry.theme ?? kindLabel(entry.kind)"
+                loading="lazy"
+                class="h-40 w-full object-cover"
+              />
+            } @else {
+              <app-icon name="image-off" />
+            }
+          </div>
+
+          <div card-title class="text-lg">
+            {{ entry.theme || 'Untitled ' + kindLabel(entry.kind) }}
+          </div>
+
+          <p card-subtitle class="flex items-center gap-1.5">
+            <app-icon [name]="kindIcon(entry.kind)" />
+            {{ kindLabel(entry.kind) }}
+          </p>
+
+          <div card-content class="flex flex-col gap-3">
+            <div class="flex items-center gap-2">
+              <div class="rating rating-sm">
+                <input
+                  type="radio"
+                  [name]="'rating-' + entry.id"
+                  class="rating-hidden"
+                  disabled
+                  [checked]="filledStars(entry) === 0"
+                />
+
+                @for (star of [1, 2, 3, 4, 5]; track star) {
+                  <input
+                    type="radio"
+                    [name]="'rating-' + entry.id"
+                    class="mask mask-star-2 bg-warning"
+                    disabled
+                    [checked]="star === filledStars(entry)"
+                  />
+                }
+              </div>
+
+              <span class="text-sm text-base-content/60">
+                @if (entry.ratingCount > 0) {
+                  {{ entry.averageRating | number: '1.1-1' }} ({{ entry.ratingCount }})
+                } @else {
+                  No ratings yet
+                }
+              </span>
+            </div>
+
+            <div>
+              <span class="badge" [class]="statusBadgeClass(entry.playStatus)">
+                {{ statusLabel(entry.playStatus) }}
+              </span>
+            </div>
+
+            <a [href]="entry.playUrl" class="btn btn-primary btn-sm btn-block">
+              {{ playActionLabel(entry.playStatus) }}
+            </a>
+          </div>
+        </app-card>
+      }
+    </div>
+
+    <div class="join flex justify-center pt-2">
+      <button
+        type="button"
+        class="join-item btn btn-outline btn-sm"
+        [disabled]="!hasPreviousPage()"
+        (click)="previousPage()"
+      >
+        <app-icon name="chevron-left" />
+        Previous
+      </button>
+
+      <button type="button" class="join-item btn btn-outline btn-sm btn-active pointer-events-none">
+        Page {{ page() }}
+      </button>
+
+      <button
+        type="button"
+        class="join-item btn btn-outline btn-sm"
+        [disabled]="!hasNextPage()"
+        (click)="nextPage()"
+      >
+        Next
+        <app-icon name="chevron-right" />
+      </button>
+    </div>
+  }
+</app-page-layout>

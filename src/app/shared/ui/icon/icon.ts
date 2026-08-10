@@ -1,40 +1,62 @@
-import { Component, input } from "@angular/core";
-import { LucideAngularModule } from "lucide-angular";
+import { Component, input } from '@angular/core';
 import {
+  ChevronLeft,
+  ChevronRight,
   CircleAlert,
+  CircleCheck,
   CircleUser,
+  Clock,
   Gamepad2,
+  ImageOff,
+  Inbox,
   Info,
   LayoutDashboard,
+  LayoutGrid,
+  LucideAngularModule,
   Menu,
   Moon,
+  Puzzle,
+  RefreshCw,
   Sun,
+  Timer,
   Trees,
   Trophy,
   UserRoundCog,
-} from "lucide-angular";
+  Users,
+} from 'lucide-angular';
 
 const usedIcons = {
+  ChevronLeft,
+  ChevronRight,
   CircleAlert,
   CircleUser,
   Gamepad2,
+  ImageOff,
+  Inbox,
   Info,
   LayoutDashboard,
+  LayoutGrid,
   Menu,
   Moon,
+  Puzzle,
+  RefreshCw,
   Sun,
   Trees,
   Trophy,
   UserRoundCog,
+  Users,
+  Timer,
+  CircleCheck,
+  Clock,
 };
 
 @Component({
-  selector: "app-icon",
+  selector: 'app-icon',
   standalone: true,
   providers: [LucideAngularModule.pick(usedIcons).providers!],
   imports: [LucideAngularModule],
-  templateUrl: "./icon.html",
-  styleUrl: "./icon.css",
+  templateUrl: './icon.html',
+  styleUrl: './icon.css',
 })
 export class IconComponent {
   name = input<string>();
