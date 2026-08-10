@@ -107,7 +107,7 @@
           }
 
           @if (puzzleImage(); as image) {
-            <div class="w-full overflow-hidden rounded-box">
+            <div class="grid aspect-square w-full max-w-xl overflow-hidden rounded-box">
               <img [src]="image" alt="Puzzle" class="block w-full" />
             </div>
           }
@@ -134,9 +134,9 @@
         </div>
 
         @if (puzzleImage(); as image) {
-          <div class="flex flex-col gap-3">
+          <div class="flex flex-col items-center gap-3">
             <div
-              class="grid aspect-square w-full overflow-hidden rounded-box"
+              class="grid aspect-square w-full max-w-xl overflow-hidden rounded-box"
               [style.grid-template-columns]="'repeat(' + game.gridSize + ', 1fr)'"
             >
               @for (tile of game.board; track $index) {
@@ -192,7 +192,7 @@
           </div>
 
           @if (puzzleImage(); as image) {
-            <div class="w-full overflow-hidden rounded-box">
+            <div class="grid aspect-square w-full max-w-xl overflow-hidden rounded-box">
               <img [src]="image" alt="Completed puzzle" class="block w-full" />
             </div>
           }
@@ -218,7 +218,7 @@
           </div>
 
           @if (puzzleImage(); as image) {
-            <div class="w-full overflow-hidden rounded-box">
+            <div class="grid aspect-square w-full max-w-xl overflow-hidden rounded-box">
               <img [src]="image" alt="Puzzle" class="block w-full" />
             </div>
           }
