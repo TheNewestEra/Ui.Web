@@ -42,13 +42,9 @@
           </app-form-field>
 
           @if (registerErrorMessage()) {
-            <div class="alert alert-error">
-              <app-icon name="circle-alert" />
-
-              <span>
-                {{ registerErrorMessage() }}
-              </span>
-            </div>
+            <app-error-alert>
+              {{ registerErrorMessage() }}
+            </app-error-alert>
           }
 
           <app-button type="submit" variant="primary" [loading]="registerLoading()"
@@ -67,16 +63,22 @@
           <div class="text-center">
             <p class="text-sm text-base-content/60 mb-2">Your login code</p>
 
+            <!-- TODO: remove right space -->
+            <!-- TODO: Add Copy button -->
             <div class="text-4xl font-bold tracking-[0.5em]">
               {{ registrationCode() }}
             </div>
           </div>
 
+          <!-- TODO: Fix the colour here... -->
           <div class="alert alert-info">
             <app-icon name="info" />
 
             <span> Save this code. You'll need it to log back into your account. </span>
           </div>
+
+          <!-- Add a Continue button -->
+          <!-- When clicked, take user to the normal Accounts page. -->
         </div>
       </app-card>
     }
@@ -101,13 +103,9 @@
           </app-form-field>
 
           @if (loginErrorMessage()) {
-            <div class="alert alert-error">
-              <app-icon name="circle-alert" />
-
-              <span>
-                {{ loginErrorMessage() }}
-              </span>
-            </div>
+            <app-error-alert>
+              {{ loginErrorMessage() }}
+            </app-error-alert>
           }
 
           <app-button type="submit" variant="primary" [loading]="loginLoading()">
