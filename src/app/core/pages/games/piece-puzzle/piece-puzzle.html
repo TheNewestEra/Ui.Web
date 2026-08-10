@@ -105,8 +105,15 @@
               Start now
             </app-button>
           }
+
+          @if (puzzleImage(); as image) {
+            <div class="w-full overflow-hidden rounded-box">
+              <img [src]="image" alt="Puzzle" class="block w-full" />
+            </div>
+          }
         </div>
       }
+
       @if (game?.status === PuzzleStatus.Playing) {
         <div class="mb-4 flex items-center justify-between">
           <div>
@@ -126,103 +133,107 @@
           </div>
         </div>
 
-        <!-- puzzle board -->
+        @if (puzzleImage(); as image) {
+          <div class="flex flex-col gap-3">
+            <div
+              class="grid aspect-square w-full overflow-hidden rounded-box"
+              [style.grid-template-columns]="'repeat(' + game.gridSize + ', 1fr)'"
+            >
+              @for (tile of game.board; track $index) {
+                <button
+                  type="button"
+                  [disabled]="moving()"
+                  class="relative aspect-square overflow-hidden border-2 border-transparent transition-all duration-150"
+                  [style.--tw-ring-color]="userColor()"
+                  [class.ring-2]="selectedTile() === $index"
+                  [style.border-color]="selectedTile() === $index ? userColor() : 'transparent'"
+                  [class.scale-[0.98]]="selectedTile() === $index"
+                  (click)="selectTile($index)"
+                >
+                  <span
+                    class="absolute inset-0 bg-cover"
+                    [style.background-image]="'url(' + image + ')'"
+                    [style.background-size]="game.gridSize * 100 + '% ' + game.gridSize * 100 + '%'"
+                    [style.background-position]="getTilePosition(tile, game.gridSize)"
+                  ></span>
+
+                  @if (selectedTile() === $index) {
+                    <span
+                      class="absolute inset-0"
+                      [style.background-color]="userColor()"
+                      style="opacity: 0.25"
+                    ></span>
+                  }
+                </button>
+              }
+            </div>
+
+            <p class="text-sm text-base-content/60">
+              Click a tile, then click another to swap them.
+            </p>
+          </div>
+        }
       }
 
-      <!-- Puzzle -->
-      <!-- TODO: move it to the center-->
-      <app-card class="flex justify-center items-center">
-        <section card-content>
-          @if (gameEnded()) {
-            <div class="flex flex-col items-center gap-6">
-              @if (puzzleImage(); as image) {
-                <div class="w-full overflow-hidden rounded-box">
-                  <img
-                    [src]="image"
-                    [alt]="game?.status === PuzzleStatus.Solved ? 'Completed puzzle' : 'Puzzle'"
-                    class="block w-full"
-                  />
-                </div>
-              }
+      @if (game?.status === PuzzleStatus.Solved) {
+        <div class="flex flex-col items-center gap-5 py-10 text-center">
+          <div class="badge badge-info">Solved</div>
 
-              <div class="flex flex-col items-center gap-2 text-center">
-                @if (game?.status === PuzzleStatus.Solved) {
-                  <div class="badge badge-success gap-2">
-                    <app-icon name="circle-check" />
-                    Solved!
-                  </div>
+          <div>
+            <h2 class="text-2xl font-bold">Puzzle Completed</h2>
+          </div>
 
-                  <h2 class="text-2xl font-bold">Puzzle Complete</h2>
+          <div class="mt-2">
+            <div class="text-sm text-base-content/60">Score</div>
 
-                  <p class="text-base-content/60">Nice work!</p>
-                } @else if (game?.status === PuzzleStatus.Timeout) {
-                  <div class="badge badge-warning gap-2">
-                    <app-icon name="clock" />
-                    Time's Up
-                  </div>
-
-                  <h2 class="text-2xl font-bold">Time's Up!</h2>
-
-                  <p class="text-base-content/60">The puzzle wasn't completed in time.</p>
-                }
-
-                <div class="mt-2">
-                  <div class="text-sm text-base-content/60">Score</div>
-
-                  <div class="text-4xl font-bold">
-                    {{ game.score ?? 0 }}
-                  </div>
-                </div>
-              </div>
+            <div class="text-4xl font-bold">
+              {{ game.score ?? 0 }}
             </div>
-          } @else if (puzzleImage(); as image) {
-            <div class="flex flex-col gap-1">
-              <div
-                class="grid aspect-square w-full overflow-hidden rounded-box"
-                [style.grid-template-columns]="'repeat(' + game.gridSize + ', 1fr)'"
-              >
-                @for (tile of game.board; track $index) {
-                  <!-- TODO: Move the blocks closer -->
-                  <!-- TODO: Make the image rounded bordered-->
-                  <button
-                    type="button"
-                    [disabled]="moving()"
-                    class="relative aspect-square overflow-hidden border-5 transition-all duration-150"
-                    [style.border-color]="selectedTile() === $index ? userColor() : 'transparent'"
-                    [class.scale-[0.97]]="selectedTile() === $index"
-                    (click)="selectTile($index)"
-                  >
-                    <span
-                      class="absolute inset-0 bg-cover"
-                      [style.background-image]="'url(' + image + ')'"
-                      [style.background-size]="
-                        game.gridSize * 100 + '% ' + game.gridSize * 100 + '%'
-                      "
-                      [style.background-position]="getTilePosition(tile, game.gridSize)"
-                    ></span>
+          </div>
 
-                    @if (selectedTile() === $index) {
-                      <span
-                        class="absolute inset-0"
-                        [style.background-color]="userColor()"
-                        style="opacity: 0.25"
-                      ></span>
-                    }
-                  </button>
-                }
-              </div>
-
-              <p class="text-sm text-base-content/60">
-                Click a tile, then click another to swap them.
-              </p>
-            </div>
-          } @else {
-            <div class="flex aspect-square items-center justify-center rounded-box bg-base-200">
-              <span class="text-base-content/60"> Generating an image... </span>
+          @if (puzzleImage(); as image) {
+            <div class="w-full overflow-hidden rounded-box">
+              <img [src]="image" alt="Completed puzzle" class="block w-full" />
             </div>
           }
-        </section>
-      </app-card>
+        </div>
+      }
+
+      @if (game?.status === PuzzleStatus.Timeout) {
+        <div class="flex flex-col items-center gap-5 py-10 text-center">
+          <div class="badge badge-info">Time up</div>
+
+          <div>
+            <h2 class="text-2xl font-bold">Time's Up!</h2>
+
+            <p class="text-base-content/60">The puzzle wasn't completed in time.</p>
+          </div>
+
+          <div class="mt-2">
+            <div class="text-sm text-base-content/60">Score</div>
+
+            <div class="text-4xl font-bold">
+              {{ game.score ?? 0 }}
+            </div>
+          </div>
+
+          @if (puzzleImage(); as image) {
+            <div class="w-full overflow-hidden rounded-box">
+              <img [src]="image" alt="Puzzle" class="block w-full" />
+            </div>
+          }
+        </div>
+      }
+
+      @if (game?.status === PuzzleStatus.Error) {
+        <div class="flex flex-col items-center gap-5 py-10 text-center">
+          <div class="badge badge-info">Something went wrong!</div>
+
+          <div>
+            <h2 class="text-2xl font-bold">Please try again.</h2>
+          </div>
+        </div>
+      }
     }
   </section>
 </app-page-layout>

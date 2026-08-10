@@ -88,7 +88,6 @@ export class PiecePuzzleGamePage {
   constructor() {
     this.game$.subscribe((game) => {
       this.loadPuzzleImage(game!);
-      this.updateTimers(game!);
     });
   }
 
@@ -195,6 +194,7 @@ export class PiecePuzzleGamePage {
   }
 
   private handleState(message: PuzzleStateMessage): void {
+    this.updateTimers(message!);
     this.game.set({
       id: message.id,
       theme: message.theme ?? '',
@@ -243,8 +243,8 @@ export class PiecePuzzleGamePage {
       };
     });
 
-    this.selectedTile.set(null);
-
+    this.remainingMs.set(message.remainingMs);
+    this.solved.set(true);
     this.stopTimer();
   }
 
@@ -380,7 +380,6 @@ export class PiecePuzzleGamePage {
       )
       .subscribe({
         next: (moveResponse: MoveResult) => {
-          this.updateBoard(moveResponse);
           this.selectedTile.set(null);
         },
 
@@ -388,23 +387,6 @@ export class PiecePuzzleGamePage {
           console.error('Failed to move tiles', error);
         },
       });
-  }
-
-  private updateBoard(response: MoveResult): void {
-    this.game.update((game) => {
-      if (!game) return game;
-
-      return {
-        ...game,
-        board: response.board,
-        score: response.score,
-        status: response.status,
-      };
-    });
-
-    this.solved.set(response.solved);
-
-    if (this.gameEnded()) this.stopTimer();
   }
 
   private stopTimer(): void {
