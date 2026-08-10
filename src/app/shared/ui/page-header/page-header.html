@@ -1,19 +1,15 @@
-<div class="flex items-center justify-between mb-8">
+<div class="flex items-center justify-between mb-2">
   <div>
     <h1 class="text-4xl font-bold">{{ title() }}</h1>
 
     @if (subtitle()) {
-
-    <p class="text-base-content/70 mt-2">{{ subtitle() }}</p>
-
+      <p class="text-base-content/70 mt-2">{{ subtitle() }}</p>
     }
   </div>
 
   @if (showButton()) {
-
-  <app-button [variant]="buttonVariant()" (clicked)="buttonClicked.emit()">
-    {{buttonText()}}
-  </app-button>
-
+    <app-button [variant]="buttonVariant()" (clicked)="buttonClicked.emit()">
+      {{ buttonText() }}
+    </app-button>
   }
 </div>

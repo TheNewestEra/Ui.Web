@@ -23,13 +23,9 @@
         </app-form-field>
 
         @if (guessErrorMessage()) {
-          <div class="alert alert-error">
-            <app-icon name="circle-alert" />
-
-            <span>
-              {{ guessErrorMessage() }}
-            </span>
-          </div>
+          <app-error-alert>
+            {{ guessErrorMessage() }}
+          </app-error-alert>
         }
 
         <app-button type="submit" variant="primary" [loading]="guessLoading()">
@@ -64,13 +60,9 @@
         </app-form-field>
 
         @if (piecePuzzleErrorMessage()) {
-          <div class="alert alert-error">
-            <app-icon name="circle-alert" />
-
-            <span>
-              {{ piecePuzzleErrorMessage() }}
-            </span>
-          </div>
+          <app-error-alert>
+            {{ piecePuzzleErrorMessage() }}
+          </app-error-alert>
         }
 
         <app-button type="submit" variant="primary" [loading]="piecePuzzleLoading()">

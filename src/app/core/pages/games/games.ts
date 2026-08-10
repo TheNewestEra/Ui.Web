@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { PageLayoutComponent } from '@layout/page-layout/page-layout';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header';
 import { CardComponent } from '@shared/components/card/card';
@@ -7,10 +7,11 @@ import { GamesPost202Response, GuessThePromptService } from '@thenewestera/guess
 import { finalize } from 'rxjs';
 import { FormFieldComponent } from '@shared/components/form/form-field/form-field';
 import { ButtonComponent } from '@shared/components/button/button';
-import { IconComponent } from '@shared/ui/icon/icon';
 import { InputComponent } from '@shared/components/form/input/input';
-import { PiecePuzzleService, PuzzlesPost202Response } from '@thenewestera/puzzle-ng';
+import { JoinResult, PiecePuzzleService, PuzzlesPost202Response } from '@thenewestera/puzzle-ng';
 import { SelectComponent, SelectOption } from '@shared/components/form/select/select';
+import { Router } from '@angular/router';
+import { ErrorAlertComponent } from '@shared/components/alert/error/error';
 
 @Component({
   selector: 'app-games',
@@ -22,13 +23,14 @@ import { SelectComponent, SelectOption } from '@shared/components/form/select/se
     ButtonComponent,
     FormFieldComponent,
     InputComponent,
-    IconComponent,
     SelectComponent,
+    ErrorAlertComponent,
   ],
   templateUrl: './games.html',
   styleUrl: './games.css',
 })
 export class GamesPage {
+  private readonly router = inject(Router);
   private readonly guessService = inject(GuessThePromptService);
   private readonly piecePuzzleService = inject(PiecePuzzleService);
   private readonly fb = inject(FormBuilder);
@@ -120,8 +122,11 @@ export class GamesPage {
       )
       .subscribe({
         next: (response: PuzzlesPost202Response) => {
-          console.log(response.puzzleId);
-          console.log(response.hostToken);
+          sessionStorage.setItem('piecePuzzleHostToken', response.hostToken);
+
+          this.joinPuzzle(response.puzzleId, response.hostToken);
+
+          this.router.navigate(['/games/piece-puzzle', response.puzzleId]);
         },
 
         error: (error) => {
@@ -130,5 +135,18 @@ export class GamesPage {
           );
         },
       });
+  }
+
+  private joinPuzzle(puzzleId: string, hostToken: string): void {
+    this.piecePuzzleService.puzzlesIdJoinPost(puzzleId, { player: hostToken }).subscribe({
+      next: (started: JoinResult) => {
+        sessionStorage.setItem('participantId', started.participantId);
+        sessionStorage.setItem('token', started.token ?? '');
+      },
+
+      error: (error) => {
+        console.error('Failed to start puzzle', error);
+      },
+    });
   }
 }

@@ -14,6 +14,7 @@ import {
   ApiMeGet200Response,
 } from '@thenewestera/accounts-ng';
 import { finalize } from 'rxjs';
+import { ErrorAlertComponent } from '@shared/components/alert/error/error';
 
 @Component({
   selector: 'app-account',
@@ -26,6 +27,7 @@ import { finalize } from 'rxjs';
     FormFieldComponent,
     InputComponent,
     IconComponent,
+    ErrorAlertComponent,
   ],
   templateUrl: './account.html',
   styleUrl: './account.css',

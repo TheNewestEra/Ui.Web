@@ -1,0 +1,220 @@
+<app-page-layout>
+  <app-page-header title="Piece Puzzle" />
+
+  <section class="w-full flex flex-col gap-2">
+    @if (loading()) {
+      <div class="flex min-h-96 items-center justify-center">
+        <span class="loading loading-spinner loading-lg"></span>
+      </div>
+    } @else if (errorMessage()) {
+      <app-error-alert>
+        {{ errorMessage() }}
+      </app-error-alert>
+    } @else if (game(); as game) {
+      <!-- Status -->
+      @if (game.status === PuzzleStatus.Waiting) {
+        <div class="alert alert-info">
+          <app-icon name="users" />
+
+          <div>
+            <div class="font-semibold">Waiting for players</div>
+
+            <div class="text-sm opacity-70">{{ game.connectedPlayers }} player(s) connected</div>
+          </div>
+        </div>
+      }
+
+      @if (game.status === PuzzleStatus.Queued) {
+        <div class="alert alert-info">
+          <span class="loading loading-spinner loading-sm"></span>
+
+          <span> Preparing your puzzle... </span>
+        </div>
+      }
+
+      @if (game.status === PuzzleStatus.Error) {
+        <app-error-alert>
+          {{ game.error || 'Something went wrong.' }}
+        </app-error-alert>
+      }
+
+      <!-- Game information -->
+      <app-card class="hidden">
+        <div card-title>Game</div>
+
+        <div card-content class="stats stats-horizontal shadow h-full">
+          <div class="stat">
+            <div class="stat-title">Players</div>
+
+            <div class="stat-value text-2xl">
+              {{ game.connectedPlayers }}
+            </div>
+          </div>
+
+          <div class="stat">
+            <div class="stat-title">Score</div>
+
+            <div class="stat-value text-2xl">
+              {{ game.score }}
+            </div>
+          </div>
+        </div>
+      </app-card>
+
+      @if (game?.status === PuzzleStatus.Queued) {
+        <div class="flex flex-col items-center gap-3 py-12 text-center">
+          <span class="loading loading-spinner loading-lg"></span>
+
+          <h2 class="text-xl font-semibold">Creating your puzzle</h2>
+
+          <p class="text-base-content/60">The AI is preparing your puzzle...</p>
+        </div>
+      }
+
+      @if (game?.status === PuzzleStatus.Generating) {
+        <div class="flex flex-col items-center gap-3 py-12 text-center">
+          <span class="loading loading-spinner loading-lg"></span>
+
+          <h2 class="text-xl font-semibold">Generating puzzle</h2>
+
+          <p class="text-base-content/60">Almost ready...</p>
+        </div>
+      }
+
+      @if (game?.status === PuzzleStatus.Waiting) {
+        <div class="flex flex-col items-center gap-5 py-10 text-center">
+          <div class="badge badge-info">Waiting for players</div>
+
+          <div>
+            <h2 class="text-2xl font-bold">Get ready!</h2>
+
+            <p class="mt-1 text-base-content/60">The puzzle will start automatically.</p>
+          </div>
+
+          <div class="text-5xl font-bold tabular-nums">
+            {{ formattedLobbyTime() }}
+          </div>
+
+          <p class="text-sm text-base-content/60">
+            {{ game?.connectedPlayers }}
+            players connected
+          </p>
+
+          @if (isHost()) {
+            <app-button type="button" variant="primary" (click)="startGame()">
+              Start now
+            </app-button>
+          }
+        </div>
+      }
+
+      <!-- Timer -->
+      <div class="flex items-center gap-3 rounded-box bg-base-200 px-5 py-3">
+        <app-icon name="timer" />
+
+        <div>
+          <div class="text-xs uppercase tracking-wide text-base-content/60">Time</div>
+
+          <div class="font-mono text-2xl font-bold">
+            {{ formatTime(remainingMs()) }}
+          </div>
+        </div>
+      </div>
+
+      <!-- Puzzle -->
+      <!-- TODO: move it to the center-->
+      <app-card class="flex justify-center items-center">
+        <section card-content>
+          @if (gameEnded()) {
+            <div class="flex flex-col items-center gap-6">
+              @if (puzzleImage(); as image) {
+                <div class="w-full overflow-hidden rounded-box">
+                  <img
+                    [src]="image"
+                    [alt]="game?.status === PuzzleStatus.Solved ? 'Completed puzzle' : 'Puzzle'"
+                    class="block w-full"
+                  />
+                </div>
+              }
+
+              <div class="flex flex-col items-center gap-2 text-center">
+                @if (game?.status === PuzzleStatus.Solved) {
+                  <div class="badge badge-success gap-2">
+                    <app-icon name="circle-check" />
+                    Solved!
+                  </div>
+
+                  <h2 class="text-2xl font-bold">Puzzle Complete</h2>
+
+                  <p class="text-base-content/60">Nice work!</p>
+                } @else if (game?.status === PuzzleStatus.Timeout) {
+                  <div class="badge badge-warning gap-2">
+                    <app-icon name="clock" />
+                    Time's Up
+                  </div>
+
+                  <h2 class="text-2xl font-bold">Time's Up!</h2>
+
+                  <p class="text-base-content/60">The puzzle wasn't completed in time.</p>
+                }
+
+                <div class="mt-2">
+                  <div class="text-sm text-base-content/60">Score</div>
+
+                  <div class="text-4xl font-bold">
+                    {{ game.score ?? 0 }}
+                  </div>
+                </div>
+              </div>
+            </div>
+          } @else if (puzzleImage(); as image) {
+            <div class="flex flex-col gap-3">
+              <div
+                class="grid aspect-square w-full overflow-hidden rounded-box"
+                [style.grid-template-columns]="'repeat(' + game.gridSize + ', 1fr)'"
+              >
+                @for (tile of game.board; track $index) {
+                  <!-- TODO: Move the blocks closer -->
+                  <!-- TODO: Make the image rounded bordered-->
+                  <button
+                    type="button"
+                    [disabled]="moving()"
+                    class="relative aspect-square overflow-hidden border-5 transition-all duration-150"
+                    [style.border-color]="selectedTile() === $index ? userColor() : 'transparent'"
+                    [class.scale-[0.97]]="selectedTile() === $index"
+                    (click)="selectTile($index)"
+                  >
+                    <span
+                      class="absolute inset-0 bg-cover"
+                      [style.background-image]="'url(' + image + ')'"
+                      [style.background-size]="
+                        game.gridSize * 100 + '% ' + game.gridSize * 100 + '%'
+                      "
+                      [style.background-position]="getTilePosition(tile, game.gridSize)"
+                    ></span>
+
+                    @if (selectedTile() === $index) {
+                      <span
+                        class="absolute inset-0"
+                        [style.background-color]="userColor()"
+                        style="opacity: 0.25"
+                      ></span>
+                    }
+                  </button>
+                }
+              </div>
+
+              <p class="text-sm text-base-content/60">
+                Click a tile, then click another to swap them.
+              </p>
+            </div>
+          } @else {
+            <div class="flex aspect-square items-center justify-center rounded-box bg-base-200">
+              <span class="text-base-content/60"> Generating an image... </span>
+            </div>
+          }
+        </section>
+      </app-card>
+    }
+  </section>
+</app-page-layout>
