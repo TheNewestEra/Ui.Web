@@ -25,6 +25,7 @@ import {
 } from '@core/models/piece-puzzle-socket.interface';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { ButtonComponent } from '@shared/components/button/button';
+import { InfoAlertComponent } from '@shared/components/alert/info/info';
 
 @Component({
   selector: 'app-piece-puzzle',
@@ -35,6 +36,7 @@ import { ButtonComponent } from '@shared/components/button/button';
     PageHeaderComponent,
     CardComponent,
     ButtonComponent,
+    InfoAlertComponent,
   ],
   templateUrl: './piece-puzzle.html',
   styleUrl: './piece-puzzle.css',

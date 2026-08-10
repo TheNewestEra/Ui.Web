@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { PageLayoutComponent } from '@layout/page-layout/page-layout';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header';
 import { CardComponent } from '@shared/components/card/card';
@@ -7,7 +7,6 @@ import { FormFieldComponent } from '@shared/components/form/form-field/form-fiel
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { InputComponent } from '@shared/components/form/input/input';
 import { UserStateService } from '@core/services/user-state.service';
-import { IconComponent } from '@shared/ui/icon/icon';
 import {
   AccountRegisterPost200Response,
   AccountService,
@@ -15,6 +14,8 @@ import {
 } from '@thenewestera/accounts-ng';
 import { finalize } from 'rxjs';
 import { ErrorAlertComponent } from '@shared/components/alert/error/error';
+import { CodeDisplayComponent } from '@core/components/code-display/code-display';
+import { OtpInputComponent } from '@shared/components/form/otp-input/otp-input';
 
 @Component({
   selector: 'app-account',
@@ -26,11 +27,13 @@ import { ErrorAlertComponent } from '@shared/components/alert/error/error';
     ButtonComponent,
     FormFieldComponent,
     InputComponent,
-    IconComponent,
     ErrorAlertComponent,
+    CodeDisplayComponent,
+    OtpInputComponent,
   ],
   templateUrl: './account.html',
   styleUrl: './account.css',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AccountPage {
   private readonly accountsService = inject(AccountService);
@@ -53,8 +56,26 @@ export class AccountPage {
   readonly loginErrorMessage = signal<string | null>(null);
   readonly loginForm = this.fb.nonNullable.group({
     username: ['', Validators.required],
-    code: ['', Validators.required],
+    code: ['', [Validators.required, Validators.pattern(/^\d{6}$/)]],
   });
+
+  copied = signal(false);
+
+  async copy(): Promise<void> {
+    if (this.registrationCode() === null) return;
+
+    try {
+      await navigator.clipboard.writeText(this.registrationCode()!);
+
+      this.copied.set(true);
+
+      setTimeout(() => {
+        this.copied.set(false);
+      }, 2000);
+    } catch (error) {
+      console.error('Failed to copy code', error);
+    }
+  }
 
   register(): void {
     if (this.registerLoading()) return;
@@ -146,5 +167,9 @@ export class AccountPage {
           this.userState.logout();
         },
       });
+  }
+
+  continueAfterRegistration(): void {
+    this.registrationCode.set(null);
   }
 }

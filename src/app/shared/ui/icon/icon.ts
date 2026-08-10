@@ -1,11 +1,13 @@
 import { Component, input } from '@angular/core';
 import {
+  ArrowRight,
   ChevronLeft,
   ChevronRight,
   CircleAlert,
   CircleCheck,
   CircleUser,
   Clock,
+  Copy,
   Gamepad2,
   ImageOff,
   Inbox,
@@ -48,6 +50,8 @@ const usedIcons = {
   Timer,
   CircleCheck,
   Clock,
+  Copy,
+  ArrowRight,
 };
 
 @Component({

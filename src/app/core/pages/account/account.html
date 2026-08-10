@@ -5,7 +5,7 @@
   />
 
   <section class="flex flex-col space-y-6">
-    @if (userState.isLoggedIn()) {
+    @if (userState.isLoggedIn() && !registrationComplete()) {
       <!-- Logged-in view -->
       <app-card>
         <div card-title>Your account</div>
@@ -54,33 +54,29 @@
       </app-card>
     }
     @if (registrationComplete()) {
-      <app-card>
-        <div card-title>Account created</div>
+      @if (registrationCode()) {
+        <app-card>
+          <div card-title>Account created!</div>
 
-        <div card-subtitle>Your account has been created successfully.</div>
+          <div card-subtitle>
+            Keep this code somewhere safe. You'll use it together with your username to log in.
+          </div>
 
-        <div card-content class="flex flex-col gap-6">
-          <div class="text-center">
-            <p class="text-sm text-base-content/60 mb-2">Your login code</p>
+          <div card-content class="space-y-6">
+            <app-code-display [code]="registrationCode()!" />
 
-            <!-- TODO: remove right space -->
-            <!-- TODO: Add Copy button -->
-            <div class="text-4xl font-bold tracking-[0.5em]">
-              {{ registrationCode() }}
+            <div class="flex justify-end">
+              <app-button
+                variant="primary"
+                rightIcon="arrow-right"
+                (clicked)="continueAfterRegistration()"
+              >
+                Continue
+              </app-button>
             </div>
           </div>
-
-          <!-- TODO: Fix the colour here... -->
-          <div class="alert alert-info">
-            <app-icon name="info" />
-
-            <span> Save this code. You'll need it to log back into your account. </span>
-          </div>
-
-          <!-- Add a Continue button -->
-          <!-- When clicked, take user to the normal Accounts page. -->
-        </div>
-      </app-card>
+        </app-card>
+      }
     }
 
     @if (!userState.isLoggedIn()) {
@@ -99,7 +95,7 @@
           </app-form-field>
 
           <app-form-field label="Code" [control]="loginForm.controls.code">
-            <app-input formControlName="code" placeholder="6-digit code" />
+            <app-otp-input formControlName="code" [length]="6" />
           </app-form-field>
 
           @if (loginErrorMessage()) {

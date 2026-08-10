@@ -13,7 +13,7 @@
     } @else if (game(); as game) {
       <!-- Status -->
       @if (game.status === PuzzleStatus.Waiting) {
-        <div class="alert alert-info">
+        <app-info-alert>
           <app-icon name="users" />
 
           <div>
@@ -21,15 +21,15 @@
 
             <div class="text-sm opacity-70">{{ game.connectedPlayers }} player(s) connected</div>
           </div>
-        </div>
+        </app-info-alert>
       }
 
       @if (game.status === PuzzleStatus.Queued) {
-        <div class="alert alert-info">
+        <app-info-alert>
           <span class="loading loading-spinner loading-sm"></span>
 
           <span> Preparing your puzzle... </span>
-        </div>
+        </app-info-alert>
       }
 
       @if (game.status === PuzzleStatus.Error) {
