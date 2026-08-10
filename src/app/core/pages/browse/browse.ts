@@ -11,6 +11,7 @@ import { ButtonComponent } from '@shared/components/button/button';
 import { IconComponent } from '@shared/ui/icon/icon';
 import { FormFieldComponent } from '@shared/components/form/form-field/form-field';
 import { SelectComponent, SelectOption } from '@shared/components/form/select/select';
+import { ErrorAlertComponent } from '@shared/components/alert/error/error';
 
 const PAGE_SIZE = 12;
 
@@ -26,6 +27,7 @@ const PAGE_SIZE = 12;
     IconComponent,
     FormFieldComponent,
     SelectComponent,
+    ErrorAlertComponent,
   ],
   templateUrl: './browse.html',
   styleUrl: './browse.css',
