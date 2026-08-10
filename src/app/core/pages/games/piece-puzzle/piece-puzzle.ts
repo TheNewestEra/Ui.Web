@@ -1,9 +1,7 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import {
-  JoinResult,
   MoveResult,
-  Ok,
   PiecePuzzleService,
   Puzzle,
   PuzzlesIdMovePostRequest,
@@ -16,6 +14,17 @@ import { PageHeaderComponent } from '@shared/ui/page-header/page-header';
 import { CardComponent } from '@shared/components/card/card';
 import { UserStateService } from '@core/services/user-state.service';
 import { finalize } from 'rxjs';
+import { PiecePuzzleSocketService } from '@core/services/piece-puzzle-socket.service';
+import {
+  PuzzleMoveMessage,
+  PuzzlePresenceMessage,
+  PuzzleSocketMessage,
+  PuzzleSolvedMessage,
+  PuzzleStateMessage,
+  PuzzleStatusMessage,
+} from '@core/models/piece-puzzle-socket.interface';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { toObservable } from '@angular/core/rxjs-interop';
 import { ButtonComponent } from '@shared/components/button/button';
 
 @Component({
@@ -35,11 +44,18 @@ export class PiecePuzzleGamePage {
   private readonly route = inject(ActivatedRoute);
   private readonly piecePuzzleService = inject(PiecePuzzleService);
   private readonly userStateService = inject(UserStateService);
+  private readonly puzzleSocket = inject(PiecePuzzleSocketService);
+
+  private timerInterval?: ReturnType<typeof setInterval>;
 
   readonly PuzzleStatus = PuzzleStatus;
 
+  private readonly destroyRef = inject(DestroyRef);
+
   readonly gameId = this.route.snapshot.paramMap.get('gameId');
   readonly game = signal<Puzzle | null>(null);
+  game$ = toObservable(this.game);
+
   readonly puzzleImage = signal<string | null>(null);
 
   readonly loading = signal(true);
@@ -50,18 +66,31 @@ export class PiecePuzzleGamePage {
   readonly moving = signal(false);
   readonly solved = signal(false);
 
-  // Participant details
-  participantId: string | null = null;
-  token: string | null = null;
-
   readonly gameEnded = computed(() => {
     const status = this.game()?.status;
 
     return status === PuzzleStatus.Solved || status === PuzzleStatus.Timeout;
   });
 
-  private timerInterval?: ReturnType<typeof setInterval>;
+  readonly lobbyRemainingMs = signal(0);
   readonly remainingMs = signal(0);
+
+  readonly formattedRemainingTime = computed(() => {
+    return this.formatTime(this.remainingMs());
+  });
+
+  readonly formattedLobbyTime = computed(() => {
+    return this.formatTime(this.lobbyRemainingMs());
+  });
+
+  readonly isHost = signal(true); // TODO: fix this at some point
+
+  constructor() {
+    this.game$.subscribe((game) => {
+      this.loadPuzzleImage(game!);
+      this.updateTimers(game!);
+    });
+  }
 
   ngOnInit(): void {
     if (!this.gameId) {
@@ -70,7 +99,12 @@ export class PiecePuzzleGamePage {
       return;
     }
 
-    this.loadGame();
+    this.loading.set(false);
+    this.puzzleSocket.connect(this.gameId);
+
+    this.puzzleSocket.messages.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((message) => {
+      this.handleSocketMessage(message);
+    });
     // TODO: When ws loses connection, show a toast message
   }
 
@@ -80,6 +114,20 @@ export class PiecePuzzleGamePage {
     const imageUrl = this.puzzleImage();
 
     if (imageUrl) URL.revokeObjectURL(imageUrl);
+
+    this.puzzleSocket.disconnect();
+  }
+
+  startGame(): void {
+    if (!this.gameId) return;
+
+    const hostToken = sessionStorage.getItem('piecePuzzleHostToken') ?? '';
+
+    this.piecePuzzleService.puzzlesIdStartPost(this.gameId, { hostToken }).subscribe({
+      error: (error) => {
+        console.error('Unable to start puzzle', error);
+      },
+    });
   }
 
   getTilePosition(index: number, gridSize: number): string {
@@ -118,51 +166,126 @@ export class PiecePuzzleGamePage {
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   }
 
-  loadGame(): void {
-    if (this.gameId == null) return;
+  private handleSocketMessage(message: PuzzleSocketMessage): void {
+    switch (message.type) {
+      case 'state':
+        this.handleState(message);
+        break;
 
-    this.loading.set(true);
-    this.errorMessage.set(null);
+      case 'status':
+        this.handleStatus(message);
+        break;
 
-    this.piecePuzzleService.puzzlesIdGet(this.gameId).subscribe({
-      next: (game: Puzzle) => {
-        console.log(game);
-        this.remainingMs.set(game.remainingMs ?? 0);
+      case 'move':
+        this.handleMove(message);
+        break;
 
-        this.game.set(game);
-        this.loadPuzzleImage(game);
-        this.startTimer();
-        this.loading.set(false);
+      case 'solved':
+        this.handleSolved(message);
+        break;
 
-        this.joinPuzzle(game);
-      },
+      case 'timeout':
+        this.handleTimeout();
+        break;
 
-      error: (error) => {
-        console.error(error);
+      case 'presence':
+        this.handlePresence(message);
+        break;
+    }
+  }
 
-        this.errorMessage.set(error?.error?.error ?? 'Unable to load the game.');
-
-        this.loading.set(false);
-      },
+  private handleState(message: PuzzleStateMessage): void {
+    this.game.set({
+      id: message.id,
+      theme: message.theme ?? '',
+      prompt: message.prompt ?? '',
+      status: message.status,
+      error: message.error ?? '',
+      gridSize: message.gridSize,
+      board: message.board,
+      timeLimitMs: message.timeLimitMs,
+      startedAt: message.startedAt ?? 0,
+      remainingMs: message.remainingMs ?? 0,
+      lobbyRemainingMs: message.lobbyRemainingMs ?? 0,
+      endedAt: message.endedAt ?? 0,
+      score: message.score ?? 0,
+      solvedBy: message.solvedBy ?? '',
+      connectedPlayers: message.connectedPlayers,
     });
   }
 
-  private joinPuzzle(game: Puzzle): void {
-    if (game.status === PuzzleStatus.Waiting) {
-      const hostToken = sessionStorage.getItem('piecePuzzleHostToken') ?? '';
+  private handleMove(message: PuzzleMoveMessage): void {
+    this.game.update((game) => {
+      if (!game) return game;
 
-      this.piecePuzzleService.puzzlesIdJoinPost(this.gameId!, { player: hostToken }).subscribe({
-        next: (started: JoinResult) => {
-          // TODO: Save the stuff...
-          this.participantId = started.participantId;
-          this.token = started.token;
-        },
+      const board = [...game.board];
 
-        error: (error) => {
-          console.error('Failed to start puzzle', error);
-        },
-      });
-    }
+      [board[message.cellA], board[message.cellB]] = [board[message.cellB], board[message.cellA]];
+
+      return {
+        ...game,
+        board,
+      };
+    });
+  }
+
+  private handleSolved(message: PuzzleSolvedMessage): void {
+    this.game.update((game) => {
+      if (!game) return game;
+
+      return {
+        ...game,
+        board: message.board,
+        status: PuzzleStatus.Solved,
+        score: message.score,
+        solvedBy: message.solvedBy,
+        remainingMs: message.remainingMs,
+      };
+    });
+
+    this.selectedTile.set(null);
+
+    this.stopTimer();
+  }
+
+  private handleTimeout(): void {
+    this.game.update((game) => {
+      if (!game) return game;
+
+      return {
+        ...game,
+        status: PuzzleStatus.Timeout,
+        remainingMs: 0,
+        score: 0,
+      };
+    });
+
+    this.selectedTile.set(null);
+
+    this.stopTimer();
+  }
+
+  private handlePresence(message: PuzzlePresenceMessage): void {
+    this.game.update((game) => {
+      if (!game) return game;
+
+      return {
+        ...game,
+        connectedPlayers: message.connectedPlayers,
+      };
+    });
+  }
+
+  private handleStatus(message: PuzzleStatusMessage): void {
+    this.game.update((game) => {
+      if (!game) return game;
+
+      return {
+        ...game,
+        status: message.status,
+        error: message.error ?? '',
+      };
+    });
   }
 
   private loadPuzzleImage(game: Puzzle): void {
@@ -170,6 +293,7 @@ export class PiecePuzzleGamePage {
 
     if (game.status == PuzzleStatus.Generating) return;
 
+    // If there is an image already, it will NOT call the BE
     if (this.puzzleImage()) return;
 
     this.piecePuzzleService.puzzlesIdImageGet(this.gameId!).subscribe({
@@ -184,6 +308,57 @@ export class PiecePuzzleGamePage {
     });
   }
 
+  private updateTimers(puzzle: Puzzle): void {
+    this.stopTimer();
+
+    if (puzzle.status === PuzzleStatus.Waiting) {
+      this.lobbyRemainingMs.set(puzzle.lobbyRemainingMs ?? 0);
+      this.startLobbyTimer();
+      return;
+    }
+
+    if (puzzle.status === PuzzleStatus.Playing) {
+      this.remainingMs.set(puzzle.remainingMs ?? 0);
+      this.startGameTimer();
+      return;
+    }
+
+    this.lobbyRemainingMs.set(0);
+    this.remainingMs.set(0);
+  }
+
+  private startLobbyTimer(): void {
+    this.stopTimer();
+
+    this.timerInterval = setInterval(() => {
+      this.lobbyRemainingMs.update((value) => {
+        const next = Math.max(0, value - 1000);
+
+        if (next === 0) {
+          this.stopTimer();
+        }
+
+        return next;
+      });
+    }, 1000);
+  }
+
+  private startGameTimer(): void {
+    this.stopTimer();
+
+    this.timerInterval = setInterval(() => {
+      this.remainingMs.update((value) => {
+        const next = Math.max(0, value - 1000);
+
+        if (next === 0) {
+          this.stopTimer();
+        }
+
+        return next;
+      });
+    }, 1000);
+  }
+
   private moveTiles(cellA: number, cellB: number): void {
     if (!this.gameId || this.moving()) return;
 
@@ -192,8 +367,8 @@ export class PiecePuzzleGamePage {
     const moveRequest: PuzzlesIdMovePostRequest = {
       cellA: cellA,
       cellB: cellB,
-      participantId: this.participantId!,
-      token: this.token!,
+      participantId: sessionStorage.getItem('participantId') ?? '',
+      token: sessionStorage.getItem('token') ?? '',
     };
 
     this.piecePuzzleService
@@ -230,24 +405,6 @@ export class PiecePuzzleGamePage {
     this.solved.set(response.solved);
 
     if (this.gameEnded()) this.stopTimer();
-  }
-
-  private startTimer(): void {
-    this.stopTimer();
-
-    this.timerInterval && clearInterval(this.timerInterval);
-
-    this.timerInterval = setInterval(() => {
-      const remaining = this.remainingMs();
-
-      if (remaining <= 0) {
-        this.remainingMs.set(0);
-        this.timerInterval && clearInterval(this.timerInterval);
-        return;
-      }
-
-      this.remainingMs.update((value) => Math.max(0, value - 1000));
-    }, 1000);
   }
 
   private stopTimer(): void {

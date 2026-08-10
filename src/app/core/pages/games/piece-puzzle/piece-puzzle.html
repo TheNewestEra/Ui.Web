@@ -2,16 +2,6 @@
   <app-page-header title="Piece Puzzle" />
 
   <section class="w-full flex flex-col gap-2">
-    <!-- TODO: Remove later on -->
-    <app-button
-      class="flex justify-end"
-      variant="ghost"
-      size="sm"
-      [iconOnly]="true"
-      leftIcon="rotate-ccw"
-      (clicked)="loadGame()"
-    />
-
     @if (loading()) {
       <div class="flex min-h-96 items-center justify-center">
         <span class="loading loading-spinner loading-lg"></span>
@@ -70,6 +60,53 @@
           </div>
         </div>
       </app-card>
+
+      @if (game?.status === PuzzleStatus.Queued) {
+        <div class="flex flex-col items-center gap-3 py-12 text-center">
+          <span class="loading loading-spinner loading-lg"></span>
+
+          <h2 class="text-xl font-semibold">Creating your puzzle</h2>
+
+          <p class="text-base-content/60">The AI is preparing your puzzle...</p>
+        </div>
+      }
+
+      @if (game?.status === PuzzleStatus.Generating) {
+        <div class="flex flex-col items-center gap-3 py-12 text-center">
+          <span class="loading loading-spinner loading-lg"></span>
+
+          <h2 class="text-xl font-semibold">Generating puzzle</h2>
+
+          <p class="text-base-content/60">Almost ready...</p>
+        </div>
+      }
+
+      @if (game?.status === PuzzleStatus.Waiting) {
+        <div class="flex flex-col items-center gap-5 py-10 text-center">
+          <div class="badge badge-info">Waiting for players</div>
+
+          <div>
+            <h2 class="text-2xl font-bold">Get ready!</h2>
+
+            <p class="mt-1 text-base-content/60">The puzzle will start automatically.</p>
+          </div>
+
+          <div class="text-5xl font-bold tabular-nums">
+            {{ formattedLobbyTime() }}
+          </div>
+
+          <p class="text-sm text-base-content/60">
+            {{ game?.connectedPlayers }}
+            players connected
+          </p>
+
+          @if (isHost()) {
+            <app-button type="button" variant="primary" (click)="startGame()">
+              Start now
+            </app-button>
+          }
+        </div>
+      }
 
       <!-- Timer -->
       <div class="flex items-center gap-3 rounded-box bg-base-200 px-5 py-3">
