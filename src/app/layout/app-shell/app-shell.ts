@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { SidebarComponent, SidebarItem } from '@layout/sidebar/sidebar';
 import { NavbarComponent } from '@layout/navbar/navbar';
@@ -42,4 +42,14 @@ export class AppShellComponent {
       route: '/account',
     },
   ];
+
+  sidebarOpen = signal(false);
+
+  toggleSidebar(): void {
+    this.sidebarOpen.update((open) => !open);
+  }
+
+  closeSidebar(drawer: HTMLInputElement): void {
+    drawer.checked = false;
+  }
 }

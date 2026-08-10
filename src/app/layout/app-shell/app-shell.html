@@ -1,5 +1,5 @@
 <div class="drawer lg:drawer-open min-h-screen">
-  <input id="sidebar" type="checkbox" class="drawer-toggle" />
+  <input #sidebarDrawer id="sidebar" type="checkbox" class="drawer-toggle" />
 
   <div class="drawer-content flex flex-col bg-base-200">
     <app-navbar />
@@ -12,6 +12,6 @@
   <div class="drawer-side">
     <label for="sidebar" class="drawer-overlay"> </label>
 
-    <app-sidebar [items]="menuItems"> </app-sidebar>
+    <app-sidebar [items]="menuItems" (itemSelected)="closeSidebar(sidebarDrawer)" />
   </div>
 </div>

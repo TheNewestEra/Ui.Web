@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { UserStateService } from '@core/services/user-state.service';
 import { IconComponent } from '@shared/ui/icon/icon';
@@ -25,9 +25,15 @@ export class SidebarComponent {
 
   readonly userState = inject(UserStateService);
 
+  readonly itemSelected = output<void>();
+
   readonly visibleItems = computed(() => {
     const loggedIn = this.userState.isLoggedIn();
 
     return this.items().filter((item) => !item.requiresAuth || loggedIn);
   });
+
+  onItemSelected(): void {
+    this.itemSelected.emit();
+  }
 }
