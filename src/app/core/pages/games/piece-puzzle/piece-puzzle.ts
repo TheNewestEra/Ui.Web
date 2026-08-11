@@ -1,4 +1,4 @@
-import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
+import { Component, computed, DestroyRef, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import {
   MoveResult,
@@ -43,7 +43,7 @@ import { LOCAL_STORAGE_KEYS } from '@core/constants/local-storage-keys.constants
   templateUrl: './piece-puzzle.html',
   styleUrl: './piece-puzzle.css',
 })
-export class PiecePuzzleGamePage {
+export class PiecePuzzleGamePage implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly piecePuzzleService = inject(PiecePuzzleService);
   private readonly userStateService = inject(UserStateService);
