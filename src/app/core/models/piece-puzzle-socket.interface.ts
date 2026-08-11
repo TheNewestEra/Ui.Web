@@ -49,10 +49,18 @@ export interface PuzzlePresenceMessage {
   connectedPlayers: number;
 }
 
+export interface PuzzleTileSelectedMessage {
+  type: 'tile_selected';
+  cell: number;
+  player: string;
+  color: string;
+}
+
 export type PuzzleSocketMessage =
   | PuzzleStateMessage
   | PuzzleStatusMessage
   | PuzzleMoveMessage
   | PuzzleSolvedMessage
   | PuzzleTimeoutMessage
-  | PuzzlePresenceMessage;
+  | PuzzlePresenceMessage
+  | PuzzleTileSelectedMessage;

@@ -22,6 +22,7 @@ import {
   PuzzleSolvedMessage,
   PuzzleStateMessage,
   PuzzleStatusMessage,
+  PuzzleTileSelectedMessage,
 } from '@core/models/piece-puzzle-socket.interface';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { ButtonComponent } from '@shared/components/button/button';
@@ -67,6 +68,10 @@ export class PiecePuzzleGamePage {
   readonly userColor = this.userStateService.color;
   readonly moving = signal(false);
   readonly solved = signal(false);
+
+  readonly tileSelections = signal<ReadonlyMap<number, { player: string; color: string }>>(
+    new Map(),
+  );
 
   readonly gameEnded = computed(() => {
     const status = this.game()?.status;
@@ -192,11 +197,16 @@ export class PiecePuzzleGamePage {
       case 'presence':
         this.handlePresence(message);
         break;
+
+      case 'tile_selected':
+        this.handleTileSelected(message);
+        break;
     }
   }
 
   private handleState(message: PuzzleStateMessage): void {
     this.updateTimers(message!);
+    this.tileSelections.set(new Map());
     this.game.set({
       id: message.id,
       theme: message.theme ?? '',
@@ -229,6 +239,8 @@ export class PiecePuzzleGamePage {
         board,
       };
     });
+
+    this.clearTileSelections(message.cellA, message.cellB);
   }
 
   private handleSolved(message: PuzzleSolvedMessage): void {
@@ -247,6 +259,7 @@ export class PiecePuzzleGamePage {
 
     this.remainingMs.set(message.remainingMs);
     this.solved.set(true);
+    this.tileSelections.set(new Map());
     this.stopTimer();
   }
 
@@ -263,8 +276,27 @@ export class PiecePuzzleGamePage {
     });
 
     this.selectedTile.set(null);
+    this.tileSelections.set(new Map());
 
     this.stopTimer();
+  }
+
+  private handleTileSelected(message: PuzzleTileSelectedMessage): void {
+    this.tileSelections.update((selections) => {
+      const next = new Map(selections);
+      next.set(message.cell, { player: message.player, color: message.color });
+      return next;
+    });
+  }
+
+  private clearTileSelections(...cells: number[]): void {
+    this.tileSelections.update((selections) => {
+      if (!cells.some((cell) => selections.has(cell))) return selections;
+
+      const next = new Map(selections);
+      for (const cell of cells) next.delete(cell);
+      return next;
+    });
   }
 
   private handlePresence(message: PuzzlePresenceMessage): void {
