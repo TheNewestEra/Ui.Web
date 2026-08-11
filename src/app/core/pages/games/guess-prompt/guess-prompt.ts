@@ -108,7 +108,9 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
     return this.formatTime(this.roundRemainingMs());
   });
 
-  readonly isHost = signal(true); // TODO: fix this at some point
+  readonly isHost = computed(() => {
+    return !!sessionStorage.getItem(LOCAL_STORAGE_KEYS.GUESS_HOST_TOKEN);
+  });
 
   ngOnInit(): void {
     if (!this.gameId) {

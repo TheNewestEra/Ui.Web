@@ -81,7 +81,9 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
     return this.formatTime(this.lobbyRemainingMs());
   });
 
-  readonly isHost = signal(true); // TODO: fix this at some point
+  readonly isHost = computed(() => {
+    return !!sessionStorage.getItem(LOCAL_STORAGE_KEYS.GUESS_HOST_TOKEN);
+  });
 
   constructor() {
     this.game$.subscribe((game) => {
@@ -118,7 +120,8 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
   startGame(): void {
     if (!this.gameId) return;
 
-    const hostToken = sessionStorage.getItem(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_HOST_TOKEN) ?? undefined;
+    const hostToken =
+      sessionStorage.getItem(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_HOST_TOKEN) ?? undefined;
 
     this.piecePuzzleService.puzzlesIdStartPost(this.gameId, { hostToken }).subscribe({
       error: (error) => {
