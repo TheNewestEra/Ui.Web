@@ -3,7 +3,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DecimalPipe } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
-import { ApiCatalogGet200Response, BrowseService, CatalogEntry } from '@thenewestera/browse-ng';
+import { ApiCatalogGet200Response, BrowseService, CatalogEntry, CatalogSort } from '@thenewestera/browse-ng';
 import { PageLayoutComponent } from '@layout/page-layout/page-layout';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header';
 import { CardComponent } from '@shared/components/card/card';
@@ -50,7 +50,7 @@ export class BrowsePage {
 
   readonly filterForm = this.fb.nonNullable.group({
     kind: ['all'],
-    sort: ['recent'],
+    sort: [CatalogSort.Recent],
   });
 
   readonly loading = signal(false);
@@ -82,7 +82,7 @@ export class BrowsePage {
     this.browseService
       .apiCatalogGet(
         kind === 'all' ? undefined : (kind as 'guess' | 'puzzle'),
-        sort as 'recent' | 'rating',
+        sort as CatalogSort,
         undefined,
         PAGE_SIZE,
         this.offset(),

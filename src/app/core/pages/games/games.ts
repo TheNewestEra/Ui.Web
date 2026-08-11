@@ -8,11 +8,7 @@ import { finalize } from 'rxjs';
 import { FormFieldComponent } from '@shared/components/form/form-field/form-field';
 import { ButtonComponent } from '@shared/components/button/button';
 import { InputComponent } from '@shared/components/form/input/input';
-import {
-  JoinResult as PuzzleJoinResult,
-  PiecePuzzleService,
-  PuzzlesPost202Response,
-} from '@thenewestera/puzzle-ng';
+import { PiecePuzzleService, PuzzlesPost202Response } from '@thenewestera/puzzle-ng';
 import { SelectComponent, SelectOption } from '@shared/components/form/select/select';
 import { Router } from '@angular/router';
 import { ErrorAlertComponent } from '@shared/components/alert/error/error';
@@ -128,9 +124,6 @@ export class GamesPage {
       .subscribe({
         next: (response: PuzzlesPost202Response) => {
           sessionStorage.setItem(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_HOST_TOKEN, response.hostToken);
-
-          this.joinPuzzle(response.puzzleId, response.hostToken);
-
           this.router.navigate(['/games/piece-puzzle', response.puzzleId]);
         },
 
@@ -140,21 +133,5 @@ export class GamesPage {
           );
         },
       });
-  }
-
-  private joinPuzzle(puzzleId: string, hostToken: string): void {
-    this.piecePuzzleService.puzzlesIdJoinPost(puzzleId, { player: hostToken }).subscribe({
-      next: (started: PuzzleJoinResult) => {
-        sessionStorage.setItem(
-          LOCAL_STORAGE_KEYS.PIECE_PUZZLE_PARTICIPANT_ID,
-          started.participantId,
-        );
-        sessionStorage.setItem(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_TOKEN, started.token ?? '');
-      },
-
-      error: (error) => {
-        console.error('Failed to start puzzle', error);
-      },
-    });
   }
 }
