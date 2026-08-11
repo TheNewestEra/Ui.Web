@@ -6,6 +6,7 @@ import {
   CircleAlert,
   CircleCheck,
   CircleUser,
+  CircleX,
   Clock,
   Copy,
   Gamepad2,
@@ -19,6 +20,7 @@ import {
   Moon,
   Puzzle,
   RefreshCw,
+  Sparkle,
   Sun,
   Timer,
   Trees,
@@ -52,6 +54,8 @@ const usedIcons = {
   Clock,
   Copy,
   ArrowRight,
+  Sparkle,
+  CircleX,
 };
 
 @Component({

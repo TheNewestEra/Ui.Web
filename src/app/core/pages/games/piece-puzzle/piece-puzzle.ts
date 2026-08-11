@@ -118,7 +118,7 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
   startGame(): void {
     if (!this.gameId) return;
 
-    const hostToken = sessionStorage.getItem(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_HOST_TOKEN) ?? '';
+    const hostToken = sessionStorage.getItem(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_HOST_TOKEN) ?? undefined;
 
     this.piecePuzzleService.puzzlesIdStartPost(this.gameId, { hostToken }).subscribe({
       error: (error) => {
@@ -369,7 +369,7 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
       cellA: cellA,
       cellB: cellB,
       participantId: sessionStorage.getItem(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_PARTICIPANT_ID) ?? '',
-      token: sessionStorage.getItem(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_TOKEN) ?? '',
+      token: sessionStorage.getItem(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_TOKEN) ?? undefined,
     };
 
     this.piecePuzzleService
