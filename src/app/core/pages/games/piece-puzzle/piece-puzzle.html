@@ -11,33 +11,6 @@
         {{ errorMessage() }}
       </app-error-alert>
     } @else if (game(); as game) {
-      <!-- Status -->
-      @if (game.status === PuzzleStatus.Waiting) {
-        <app-info-alert>
-          <app-icon name="users" />
-
-          <div>
-            <div class="font-semibold">Waiting for players</div>
-
-            <div class="text-sm opacity-70">{{ game.connectedPlayers }} player(s) connected</div>
-          </div>
-        </app-info-alert>
-      }
-
-      @if (game.status === PuzzleStatus.Queued) {
-        <app-info-alert>
-          <span class="loading loading-spinner loading-sm"></span>
-
-          <span> Preparing your puzzle... </span>
-        </app-info-alert>
-      }
-
-      @if (game.status === PuzzleStatus.Error) {
-        <app-error-alert>
-          {{ game.error || 'Something went wrong.' }}
-        </app-error-alert>
-      }
-
       <!-- Game information -->
       <app-card class="hidden">
         <div card-title>Game</div>
