@@ -7,7 +7,6 @@ import {
   PuzzlesIdMovePostRequest,
   PuzzleStatus,
 } from '@thenewestera/puzzle-ng';
-import { IconComponent } from '@shared/ui/icon/icon';
 import { ErrorAlertComponent } from '@shared/components/alert/error/error';
 import { PageLayoutComponent } from '@layout/page-layout/page-layout';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header';
@@ -25,19 +24,16 @@ import {
 } from '@core/models/piece-puzzle-socket.interface';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { ButtonComponent } from '@shared/components/button/button';
-import { InfoAlertComponent } from '@shared/components/alert/info/info';
 import { LOCAL_STORAGE_KEYS } from '@core/constants/local-storage-keys.constants';
 
 @Component({
   selector: 'app-piece-puzzle',
   imports: [
-    IconComponent,
     ErrorAlertComponent,
     PageLayoutComponent,
     PageHeaderComponent,
     CardComponent,
     ButtonComponent,
-    InfoAlertComponent,
   ],
   templateUrl: './piece-puzzle.html',
   styleUrl: './piece-puzzle.css',
