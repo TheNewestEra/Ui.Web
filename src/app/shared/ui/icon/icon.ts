@@ -13,6 +13,7 @@ import {
   ImageOff,
   Inbox,
   Info,
+  Layers3,
   LayoutDashboard,
   LayoutGrid,
   LucideAngularModule,
@@ -56,6 +57,7 @@ const usedIcons = {
   ArrowRight,
   Sparkle,
   CircleX,
+  Layers3,
 };
 
 @Component({

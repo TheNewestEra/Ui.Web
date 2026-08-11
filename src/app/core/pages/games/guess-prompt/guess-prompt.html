@@ -15,7 +15,7 @@
         <div class="flex flex-col items-center gap-3 py-12 text-center">
           <span class="loading loading-spinner loading-lg"></span>
 
-          <h2 class="text-xl font-semibold">Generating puzzle</h2>
+          <h2 class="text-xl font-semibold">Generating images</h2>
 
           <p class="text-base-content/60">Almost ready...</p>
         </div>
@@ -23,15 +23,23 @@
 
       @if (game.status === GameStatus.Waiting) {
         <div class="flex flex-col items-center gap-5 py-10 text-center">
-          <div class="badge badge-info">Waiting for players</div>
-
           <div>
-            <h2 class="text-2xl font-bold">Get ready!</h2>
+            <h2 class="text-2xl font-bold">Waiting for players</h2>
 
             <p class="mt-1 text-base-content/60">The game will start automatically.</p>
           </div>
 
-          <!-- TODO: Should we inform the user that the game will consist of X Rounds? -->
+          <div class="rounded-box bg-base-200 px-5 py-3">
+            <div class="flex items-center gap-3">
+              <app-icon name="layers-3" class="size-5 text-primary" />
+            </div>
+          </div>
+
+          <div class="text-center">
+            <p class="text-sm text-base-content/60">Game length</p>
+
+            <p class="font-semibold">{{ game?.rounds?.length ?? 0 }} rounds</p>
+          </div>
 
           <div class="text-5xl font-bold tabular-nums">
             {{ formattedLobbyTime() }}
@@ -52,8 +60,6 @@
       @if (game?.status === GameStatus.Solved) {
         <div class="flex flex-col items-center gap-8 py-10">
           <div class="text-center">
-            <div class="badge badge-success mb-4">Solved</div>
-
             <h2 class="text-3xl font-bold">Game Completed</h2>
 
             <p class="mt-2 text-base-content/60">Great game! Here are the final scores.</p>
@@ -120,8 +126,6 @@
       @if (game?.status === GameStatus.Timeout) {
         <div class="flex flex-col items-center gap-8 py-10">
           <div class="text-center">
-            <div class="badge badge-warning mb-4">Time Up</div>
-
             <h2 class="text-3xl font-bold">Time's Up!</h2>
 
             <p class="mt-2 text-base-content/60">The game wasn't completed in time.</p>
@@ -134,7 +138,7 @@
 
       @if (game?.status === GameStatus.Error) {
         <div class="flex flex-col items-center gap-5 py-10 text-center">
-          <div class="badge badge-info">Something went wrong!</div>
+          <h2 class="text-3xl font-bold">Something went wrong!</h2>
 
           <div>
             <h2 class="text-2xl font-bold">Please try again.</h2>
