@@ -14,35 +14,41 @@ export class UserStateService {
 
   readonly displayName = computed(() => this._user()?.username ?? 'Guest');
 
-  readonly color = computed(() => this._user()?.color ?? this.generateUserColor());
+  readonly color = computed(
+    () => this._user()?.color ?? localStorage.getItem(LOCAL_STORAGE_KEYS.COLOUR),
+  );
 
   setUser(user: User) {
     this._user.set(user);
 
-    localStorage.setItem(LOCAL_STORAGE_KEYS.STORAGE_KEY, JSON.stringify(user));
+    localStorage.setItem(LOCAL_STORAGE_KEYS.USER, JSON.stringify(user));
   }
 
   logout(): void {
     this._user.set(null);
 
-    localStorage.removeItem(LOCAL_STORAGE_KEYS.STORAGE_KEY);
+    localStorage.removeItem(LOCAL_STORAGE_KEYS.USER);
   }
 
   private generateUserColor(): string {
-    const hue = Math.floor(Math.random() * 360);
+    const color = Math.floor(Math.random() * 0xffffff);
 
-    return `hsl(${hue}, 70%, 55%)`;
+    return `#${color.toString(16).padStart(6, '0')}`;
   }
 
   private loadUser(): User | null {
-    const stored = localStorage.getItem(LOCAL_STORAGE_KEYS.STORAGE_KEY);
+    const stored = localStorage.getItem(LOCAL_STORAGE_KEYS.USER);
 
-    if (!stored) return null;
+    if (!stored) {
+      if (localStorage.getItem(LOCAL_STORAGE_KEYS.COLOUR) === null)
+        localStorage.setItem(LOCAL_STORAGE_KEYS.COLOUR, this.generateUserColor());
+      return null;
+    }
 
     try {
       return JSON.parse(stored) as User;
     } catch {
-      localStorage.removeItem(LOCAL_STORAGE_KEYS.STORAGE_KEY);
+      localStorage.removeItem(LOCAL_STORAGE_KEYS.USER);
       return null;
     }
   }
