@@ -1,5 +1,6 @@
 export const LOCAL_STORAGE_KEYS = {
-  STORAGE_KEY: 'escape-ai-user',
+  USER: 'user',
+  COLOUR: 'userColour',
   THEME: 'theme',
 
   // Piece Puzzle
