@@ -37,6 +37,12 @@ export class AppShellComponent {
       route: '/leaderboard',
     },
     {
+      label: 'Friends',
+      icon: 'users',
+      route: '/friends',
+      requiresAuth: true,
+    },
+    {
       label: 'Account',
       icon: 'user-round-cog',
       route: '/account',
