@@ -43,6 +43,7 @@ export interface GuessPromptRoundReadyMessage {
 export interface GuessPromptGuessMessage {
   type: 'guess';
   index: number;
+  participantId: string;
   player: string;
   color: string;
   correct: boolean;
