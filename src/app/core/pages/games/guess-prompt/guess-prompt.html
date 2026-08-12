@@ -127,7 +127,13 @@
             emptyMessage="No scores were recorded."
           />
 
-          <app-button (click)="replayGame()"> Play Again </app-button>
+          <app-button
+            [loading]="replaying()"
+            [disabled]="replaying()"
+            (clicked)="replayGame()"
+          >
+            Play Again
+          </app-button>
         </div>
       }
 
@@ -139,7 +145,13 @@
             <p class="mt-2 text-base-content/60">The game wasn't completed in time.</p>
           </div>
 
-          <app-button (click)="replayGame()"> Play Again </app-button>
+          <app-button
+            [loading]="replaying()"
+            [disabled]="replaying()"
+            (clicked)="replayGame()"
+          >
+            Play Again
+          </app-button>
         </div>
       }
 

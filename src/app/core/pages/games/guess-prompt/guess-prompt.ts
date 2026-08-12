@@ -69,6 +69,7 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
   readonly loading = signal(true);
   readonly submitting = signal(false);
   readonly joining = signal(false);
+  readonly replaying = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly shareMessage = signal<string | null>(null);
 
@@ -667,17 +668,21 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
   replayGame(): void {
     const gameId = this.gameId();
 
-    if (!gameId) return;
+    if (!gameId || this.replaying()) return;
 
+    this.replaying.set(true);
     this.errorMessage.set(null);
 
-    this.guessPromptGameService.replay(gameId).subscribe({
-      error: (error) => {
-        console.error('Unable to replay game', error);
+    this.guessPromptGameService
+      .replay(gameId)
+      .pipe(finalize(() => this.replaying.set(false)))
+      .subscribe({
+        error: (error) => {
+          console.error('Unable to replay game', error);
 
-        this.errorMessage.set(error?.error?.error ?? 'Unable to replay the game.');
-      },
-    });
+          this.errorMessage.set(error?.error?.error ?? 'Unable to replay the game.');
+        },
+      });
   }
 
   private startLobbyCountdown(remainingMs: number): void {
@@ -857,6 +862,7 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
 
     this.submitting.set(false);
     this.joining.set(false);
+    this.replaying.set(false);
     this.guessResult.set(null);
     this.answeredCorrectly.set(false);
     this.guessForm.reset();
