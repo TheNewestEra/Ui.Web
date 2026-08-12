@@ -119,63 +119,13 @@
             <p class="mt-2 text-base-content/60">Great game! Here are the final scores.</p>
           </div>
 
-          <div class="w-full max-w-2xl">
-            @if (game?.results?.length ?? 0) {
-              <div class="overflow-hidden rounded-box border border-base-300 bg-base-100">
-                <div class="border-b border-base-300 bg-base-200 px-5 py-3">
-                  <div class="flex items-center justify-between">
-                    <span
-                      class="text-sm font-semibold uppercase tracking-wide text-base-content/60"
-                    >
-                      Player
-                    </span>
-
-                    <span
-                      class="text-sm font-semibold uppercase tracking-wide text-base-content/60"
-                    >
-                      Score
-                    </span>
-                  </div>
-                </div>
-
-                <div class="flex flex-col">
-                  @for (entry of leaderboardEntries(); track entry.participantId; let i = $index) {
-                    <div
-                      class="flex items-center justify-between border-b border-base-300 px-5 py-4 last:border-b-0"
-                      [class.bg-success/5]="i === 0"
-                    >
-                      <div class="flex items-center gap-4">
-                        <div
-                          class="flex size-8 items-center justify-center rounded-full bg-base-200 text-sm font-bold"
-                          [class.bg-success]="i === 0"
-                          [class.text-success-content]="i === 0"
-                        >
-                          {{ i + 1 }}
-                        </div>
-
-                        <span
-                          class="size-3 shrink-0 rounded-full ring-2 ring-base-300"
-                          [style.background-color]="entry.participant?.color"
-                        ></span>
-
-                        <span class="font-semibold">
-                          {{ entry.participant?.name ?? 'Unknown player' }}
-                        </span>
-                      </div>
-
-                      <span class="text-lg font-bold tabular-nums">
-                        {{ entry.score }}
-                      </span>
-                    </div>
-                  }
-                </div>
-              </div>
-            } @else {
-              <div class="rounded-box border border-base-300 bg-base-200 px-6 py-8 text-center">
-                <p class="text-base-content/60">No scores were recorded.</p>
-              </div>
-            }
-          </div>
+          <app-leaderboard
+            class="w-full max-w-2xl"
+            [entries]="leaderboardEntries()"
+            [currentId]="participantId()"
+            [showHeading]="false"
+            emptyMessage="No scores were recorded."
+          />
 
           <app-button (click)="replayGame()"> Play Again </app-button>
         </div>
@@ -244,41 +194,12 @@
                 />
               }
 
-              <div class="w-full max-w-2xl text-left">
-                <h3 class="mb-3 text-xl font-bold">Leaderboard</h3>
-
-                @if (game.results.length) {
-                  <div class="overflow-hidden rounded-box border border-base-300 bg-base-100">
-                    @for (
-                      entry of leaderboardEntries();
-                      track entry.participantId;
-                      let i = $index
-                    ) {
-                      <div
-                        class="flex items-center justify-between border-b border-base-300 px-5 py-4 last:border-b-0"
-                        [class.bg-primary/10]="entry.participantId === participantId()"
-                      >
-                        <div class="flex items-center gap-3">
-                          <span class="w-5 text-sm text-base-content/60">{{ i + 1 }}.</span>
-                          <span
-                            class="size-3 shrink-0 rounded-full ring-2 ring-base-300"
-                            [style.background-color]="entry.participant?.color"
-                            [attr.aria-label]="(entry.participant?.name ?? 'Player') + ' colour'"
-                          ></span>
-                          <span class="font-semibold">
-                            {{ entry.participant?.name ?? 'Unknown player' }}
-                          </span>
-                        </div>
-                        <span class="font-bold tabular-nums">{{ entry.score }}</span>
-                      </div>
-                    }
-                  </div>
-                } @else {
-                  <p class="rounded-box bg-base-200 p-5 text-center text-base-content/60">
-                    Scores will appear here.
-                  </p>
-                }
-              </div>
+              <app-leaderboard
+                class="w-full max-w-2xl text-left"
+                [entries]="leaderboardEntries()"
+                [currentId]="participantId()"
+                subtitle="Scores after this round"
+              />
             </div>
           } @else if (game.currentRound != null) {
             <div class="flex items-center justify-between">
@@ -377,38 +298,11 @@
                   </div>
                 </app-card>
               } @else {
-                <div class="w-full overflow-hidden rounded-box border border-base-300 bg-base-100">
-                  <div class="border-b border-base-300 px-5 py-4">
-                    <h3 class="text-xl font-bold">Leaderboard</h3>
-                    <p class="mt-1 text-sm text-base-content/60">Live scores for this game</p>
-                  </div>
-
-                  @if (leaderboardEntries().length) {
-                    @for (
-                      entry of leaderboardEntries();
-                      track entry.participantId;
-                      let i = $index
-                    ) {
-                      <div
-                        class="flex items-center justify-between border-b border-base-300 px-5 py-4 last:border-b-0"
-                      >
-                        <div class="flex items-center gap-3">
-                          <span class="w-5 text-sm text-base-content/60">{{ i + 1 }}.</span>
-                          <span
-                            class="size-3 rounded-full ring-2 ring-base-300"
-                            [style.background-color]="entry.participant?.color"
-                          ></span>
-                          <span class="font-semibold">
-                            {{ entry.participant?.name ?? 'Unknown player' }}
-                          </span>
-                        </div>
-                        <span class="font-bold tabular-nums">{{ entry.score }}</span>
-                      </div>
-                    }
-                  } @else {
-                    <p class="p-6 text-center text-base-content/60">No scores yet.</p>
-                  }
-                </div>
+                <app-leaderboard
+                  class="w-full"
+                  [entries]="leaderboardEntries()"
+                  subtitle="Live scores for this game"
+                />
               }
             </div>
           } @else {
