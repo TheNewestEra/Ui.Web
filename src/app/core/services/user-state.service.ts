@@ -12,7 +12,9 @@ export class UserStateService {
 
   readonly isLoggedIn = computed(() => this._user() !== null);
 
-  readonly displayName = computed(() => this._user()?.username ?? 'Guest');
+  readonly displayName = computed(
+    () => this._user()?.username ?? localStorage.getItem(LOCAL_STORAGE_KEYS.USER) ?? 'Unknown',
+  );
 
   readonly color = computed(
     () => this._user()?.color ?? localStorage.getItem(LOCAL_STORAGE_KEYS.COLOUR),
@@ -30,10 +32,10 @@ export class UserStateService {
     localStorage.removeItem(LOCAL_STORAGE_KEYS.USER);
   }
 
-  private generateUserColor(): string {
-    const color = Math.floor(Math.random() * 0xffffff);
+  private generateUserColour(): string {
+    const colour = Math.floor(Math.random() * 0xffffff);
 
-    return `#${color.toString(16).padStart(6, '0')}`;
+    return `#${colour.toString(16).padStart(6, '0')}`;
   }
 
   private loadUser(): User | null {
@@ -41,9 +43,20 @@ export class UserStateService {
 
     if (!stored) {
       if (localStorage.getItem(LOCAL_STORAGE_KEYS.COLOUR) === null)
-        localStorage.setItem(LOCAL_STORAGE_KEYS.COLOUR, this.generateUserColor());
+        localStorage.setItem(LOCAL_STORAGE_KEYS.COLOUR, this.generateUserColour());
+
+      if (localStorage.getItem(LOCAL_STORAGE_KEYS.USERNAME) === null) {
+        const randomNumbers = Array.from({ length: 3 }, () => Math.floor(Math.random() * 10)).join(
+          '',
+        );
+        localStorage.setItem(LOCAL_STORAGE_KEYS.USER, `Guest_${randomNumbers}`);
+      }
       return null;
     }
+
+    // Remove these values from local storage because the user is logged in now
+    localStorage.removeItem(LOCAL_STORAGE_KEYS.COLOUR);
+    localStorage.removeItem(LOCAL_STORAGE_KEYS.USERNAME);
 
     try {
       return JSON.parse(stored) as User;

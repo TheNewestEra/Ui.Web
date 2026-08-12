@@ -1,6 +1,6 @@
 import { Component, DestroyRef, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
-import { interval, Subscription, map, filter, distinctUntilChanged } from 'rxjs';
+import { ActivatedRoute } from '@angular/router';
+import { interval, Subscription, map, filter, distinctUntilChanged, finalize } from 'rxjs';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import {
   Game,
@@ -17,6 +17,7 @@ import {
   GuessPromptStatusMessage,
   GuessPromptRoundReadyMessage,
   GuessPromptRoundStatusMessage,
+  GuessPromptPresenceMessage,
 } from '@core/models/guess-prompt-socket.interface';
 import { CardComponent } from '@shared/components/card/card';
 import { IconComponent } from '@shared/ui/icon/icon';
@@ -62,7 +63,12 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
 
   readonly loading = signal(true);
   readonly submitting = signal(false);
+  readonly joining = signal(false);
   readonly errorMessage = signal<string | null>(null);
+  readonly shareMessage = signal<string | null>(null);
+
+  readonly joinedGameId = signal(sessionStorage.getItem(LOCAL_STORAGE_KEYS.GUESS_GAME_ID));
+  readonly participantId = signal(sessionStorage.getItem(LOCAL_STORAGE_KEYS.GUESS_PARTICIPANT_ID));
 
   readonly guessForm = new FormGroup({
     guess: new FormControl('', {
@@ -88,13 +94,14 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
    * FE counts down locally.
    */
   readonly roundRemainingMs = signal(0);
+  readonly postRoundRemainingMs = signal(0);
 
   readonly guessResult = signal<GuessResult | null>(null);
-
-  readonly roundImage = signal<string | null>(null);
+  readonly answeredCorrectly = signal(false);
 
   private lobbyTimer?: Subscription;
   private roundTimer?: Subscription;
+  private postRoundTimer?: Subscription;
 
   readonly currentRound = computed(() => {
     const game = this.game();
@@ -112,8 +119,76 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
     return this.formatTime(this.roundRemainingMs());
   });
 
+  readonly formattedPostRoundTime = computed(() => {
+    return this.formatTime(this.postRoundRemainingMs());
+  });
+
+  readonly hasJoined = computed(() => {
+    return !!this.participantId() && this.joinedGameId() === this.gameId();
+  });
+
+  readonly isSpectator = computed(() => {
+    const status = this.game()?.status;
+
+    return !this.hasJoined() && status !== GameStatus.Waiting;
+  });
+
+  readonly postRound = computed(() => {
+    const game = this.game();
+    const index = game?.postRoundIndex;
+
+    if (!game || index == null) return null;
+
+    return game.rounds[index] ?? null;
+  });
+
+  readonly displayedRound = computed(() => {
+    const game = this.game();
+
+    if (!game) return null;
+
+    const index = game.postRoundIndex ?? game.currentRound;
+
+    return index == null ? null : (game.rounds[index] ?? null);
+  });
+
+  readonly leaderboardEntries = computed(() => {
+    const game = this.game();
+
+    if (!game) return [];
+
+    return game.results.map((result) => ({
+      ...result,
+      participant: game.participants.find((participant) => participant.id === result.participantId),
+    }));
+  });
+
+  readonly currentParticipant = computed(() => {
+    return this.game()?.participants.find((participant) => participant.id === this.participantId());
+  });
+
+  readonly currentPlayerScore = computed(() => {
+    const currentScore = this.game()?.results.find(
+      (result) => result.participantId === this.participantId(),
+    )?.score;
+
+    return this.guessResult()?.totalScore ?? currentScore ?? 0;
+  });
+
+  readonly canSubmitGuess = computed(() => {
+    return (
+      this.hasJoined() &&
+      !this.answeredCorrectly() &&
+      !this.submitting() &&
+      this.roundRemainingMs() > 0
+    );
+  });
+
   readonly isHost = computed(() => {
-    return !!sessionStorage.getItem(LOCAL_STORAGE_KEYS.GUESS_HOST_TOKEN);
+    return (
+      !!sessionStorage.getItem(LOCAL_STORAGE_KEYS.GUESS_HOST_TOKEN) &&
+      sessionStorage.getItem(LOCAL_STORAGE_KEYS.GUESS_HOST_GAME_ID) === this.gameId()
+    );
   });
 
   ngOnInit(): void {
@@ -142,6 +217,7 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
 
   private initializeGame(gameId: string): void {
     this.resetGameState();
+    this.refreshPlayerIdentity(gameId);
 
     this.loading.set(true);
     this.errorMessage.set(null);
@@ -152,10 +228,6 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.stopTimers();
-
-    const image = this.roundImage();
-
-    if (image) URL.revokeObjectURL(image);
 
     this.guessPromptSocket.disconnect();
   }
@@ -195,16 +267,15 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
         this.handleRoundStatus(message);
         break;
 
-      /**
-       * Other players can produce these messages, but for the
-       * single-player implementation we don't need to react to them.
-       */
+      case 'presence':
+        this.handlePresence(message);
+        break;
+
       case 'prompts_ready':
       case 'guess':
       case 'revealed':
       case 'player_joined':
       case 'player_typing':
-      case 'presence':
         break;
     }
   }
@@ -232,7 +303,7 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
     this.loading.set(false);
     this.errorMessage.set(null);
 
-    if (previousRound !== nextRound) this.handleRoundChanged(nextRound);
+    if (previousRound !== nextRound && nextRound != null) this.handleRoundChanged(nextRound);
 
     /**
      * If we reconnect while the game is already in progress,
@@ -243,31 +314,13 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
 
   private handleRoundChanged(roundIndex: number | null | undefined): void {
     this.stopRoundTimer();
+    this.stopPostRoundTimer();
 
     this.guessResult.set(null);
+    this.answeredCorrectly.set(this.wasRoundAnswered(roundIndex));
     this.guessForm.reset();
 
-    const previousImage = this.roundImage();
-
-    if (previousImage) {
-      URL.revokeObjectURL(previousImage);
-    }
-
-    this.roundImage.set(null);
-
     if (roundIndex == null) return;
-
-    const game = this.game();
-
-    if (!game) return;
-
-    const round = game.rounds[roundIndex];
-
-    if (!round) return;
-
-    if (round.status === RoundStatus.Active || round.status === RoundStatus.Ready) {
-      this.loadRoundImage(roundIndex);
-    }
   }
 
   private handleStatus(message: GuessPromptStatusMessage): void {
@@ -298,6 +351,17 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
         this.finishGame();
         break;
     }
+  }
+
+  private handlePresence(message: GuessPromptPresenceMessage): void {
+    this.game.update((game) => {
+      if (!game) return game;
+
+      return {
+        ...game,
+        connectedPlayers: message.connectedPlayers,
+      };
+    });
   }
 
   private handleRoundReady(message: GuessPromptRoundReadyMessage): void {
@@ -339,6 +403,8 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
         return {
           ...game,
           currentRound: message.index,
+          postRoundIndex: null,
+          postRoundRemainingMs: null,
           rounds: game.rounds.map((round, index) =>
             index === message.index
               ? {
@@ -381,7 +447,10 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
 
       this.stopRoundTimer();
       this.guessForm.reset();
-      this.guessResult.set(null);
+
+      // TODO(BE): Broadcast a full state snapshot immediately after resolving a round. The
+      // round_status event does not contain the prompt, postRoundIndex, postRoundRemainingMs,
+      // or updated standings required by the reveal screen.
 
       return;
     }
@@ -408,18 +477,11 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
 
   private handleRoundActivated(index: number, remainingMs: number): void {
     this.stopRoundTimer();
+    this.stopPostRoundTimer();
 
     this.guessForm.reset();
     this.guessResult.set(null);
-
-    const previousImage = this.roundImage();
-
-    if (previousImage) URL.revokeObjectURL(previousImage);
-
-    this.roundImage.set(null);
-
-    // Fetch the image for the NEW round.
-    this.loadRoundImage(index);
+    this.answeredCorrectly.set(this.wasRoundAnswered(index));
 
     // Start from the exact value supplied by the backend.
     this.startRoundTimer(remainingMs);
@@ -441,7 +503,10 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
 
       case GameStatus.Playing:
         this.stopLobbyTimer();
-        this.syncCurrentRound(message);
+
+        if (message.postRoundIndex != null) this.syncPostRound(message);
+        else this.syncCurrentRound(message);
+
         break;
 
       case GameStatus.Solved:
@@ -474,7 +539,10 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
   }
 
   private syncCurrentRound(message: GuessPromptStateMessage): void {
-    const roundIndex = message.currentRound ?? 0;
+    const roundIndex = message.currentRound;
+
+    if (roundIndex == null) return;
+
     const round = message.rounds[roundIndex];
 
     if (!round) {
@@ -482,14 +550,14 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
       return;
     }
 
+    this.answeredCorrectly.set(this.wasRoundAnswered(roundIndex));
+
     /**
      * If the current round is ready, show it.
      *
      * The exact timer value should come from the backend.
      */
     if (round.status === RoundStatus.Active) {
-      this.loadRoundImage(roundIndex);
-
       /**
        * On an initial/reconnect state, the backend must provide
        * the current round's remaining time.
@@ -498,6 +566,17 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
        */
       if (round.remainingMs != null) this.startRoundTimer(round.remainingMs);
     }
+  }
+
+  private syncPostRound(message: GuessPromptStateMessage): void {
+    const roundIndex = message.postRoundIndex;
+
+    if (roundIndex == null) return;
+
+    this.stopRoundTimer();
+    this.guessForm.reset();
+
+    this.startPostRoundTimer(message.postRoundRemainingMs ?? 0);
   }
 
   // ---------------------------------------------------------------------------
@@ -523,6 +602,52 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
           this.errorMessage.set(error?.error?.error ?? 'Unable to start the game.');
         },
       });
+  }
+
+  joinGame(): void {
+    const gameId = this.gameId();
+
+    if (!gameId || this.game()?.status !== GameStatus.Waiting || this.hasJoined()) return;
+
+    this.joining.set(true);
+    this.errorMessage.set(null);
+
+    this.guessPromptGameService
+      .join(gameId)
+      .pipe(finalize(() => this.joining.set(false)))
+      .subscribe({
+        next: () => {
+          this.refreshPlayerIdentity(gameId);
+        },
+        error: (error) => {
+          this.errorMessage.set(error?.error?.error ?? 'Unable to join the game.');
+        },
+      });
+  }
+
+  async shareGame(): Promise<void> {
+    const url = window.location.href;
+
+    this.shareMessage.set(null);
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: 'Join my Guess the Prompt game',
+          text: 'Join my Guess the Prompt game before it starts.',
+          url,
+        });
+        this.shareMessage.set('Game shared.');
+        return;
+      }
+
+      await navigator.clipboard.writeText(url);
+      this.shareMessage.set('Game link copied.');
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') return;
+
+      this.shareMessage.set('Unable to share the game link.');
+    }
   }
 
   replayGame(): void {
@@ -563,33 +688,6 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
       });
   }
 
-  // ---------------------------------------------------------------------------
-  // Rounds
-  // ---------------------------------------------------------------------------
-  private loadRoundImage(roundIndex: number): void {
-    const gameId = this.gameId();
-
-    if (!gameId) return;
-
-    this.guessPromptService.gamesIdImagesIndexGet(gameId, roundIndex.toString()).subscribe({
-      next: (image: Blob) => {
-        const url = URL.createObjectURL(image);
-
-        const previousImage = this.roundImage();
-
-        if (previousImage) URL.revokeObjectURL(previousImage);
-
-        this.roundImage.set(url);
-      },
-
-      error: (error) => {
-        console.error('Unable to load round image', error);
-
-        this.errorMessage.set('Unable to load the game image.');
-      },
-    });
-  }
-
   private startRoundTimer(remainingMs: number): void {
     this.stopRoundTimer();
 
@@ -612,14 +710,31 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
       });
   }
 
+  private startPostRoundTimer(remainingMs: number): void {
+    this.stopPostRoundTimer();
+
+    this.postRoundRemainingMs.set(Math.max(0, remainingMs));
+
+    if (remainingMs <= 0) return;
+
+    this.postRoundTimer = interval(1000)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        const next = Math.max(0, this.postRoundRemainingMs() - 1000);
+
+        this.postRoundRemainingMs.set(next);
+
+        if (next <= 0) this.stopPostRoundTimer();
+      });
+  }
+
   // ---------------------------------------------------------------------------
   // Guess
   // ---------------------------------------------------------------------------
   submitGuess(): void {
     const gameId = this.gameId();
 
-    if (!gameId || this.submitting() || this.roundRemainingMs() <= 0 || this.guessForm.invalid)
-      return;
+    if (!gameId || !this.canSubmitGuess() || this.guessForm.invalid) return;
 
     const { guess } = this.guessForm.getRawValue();
 
@@ -652,13 +767,19 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
            */
           if (result.correct) {
             this.guessForm.reset();
-
-            this.stopRoundTimer();
+            this.answeredCorrectly.set(true);
+            this.rememberAnsweredRound(gameId, this.currentRound() ?? 0);
           }
         },
 
-        error: () => {
+        error: (error) => {
           this.submitting.set(false);
+
+          if (error?.error?.error === 'you already answered this round correctly') {
+            this.guessForm.reset();
+            this.answeredCorrectly.set(true);
+            this.rememberAnsweredRound(gameId, this.currentRound() ?? 0);
+          }
         },
       });
   }
@@ -671,12 +792,6 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
 
     this.guessResult.set(null);
     this.guessForm.reset();
-
-    const previousImage = this.roundImage();
-
-    if (previousImage) URL.revokeObjectURL(previousImage);
-
-    this.roundImage.set(null);
   }
 
   // ---------------------------------------------------------------------------
@@ -692,9 +807,15 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
     this.roundTimer = undefined;
   }
 
+  private stopPostRoundTimer(): void {
+    this.postRoundTimer?.unsubscribe();
+    this.postRoundTimer = undefined;
+  }
+
   private stopTimers(): void {
     this.stopLobbyTimer();
     this.stopRoundTimer();
+    this.stopPostRoundTimer();
   }
 
   // ---------------------------------------------------------------------------
@@ -713,36 +834,49 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
   private handleGameFinished(): void {
     this.stopTimers();
 
-    this.guessPromptGameService.clearGameCredentials();
-
     this.guessResult.set(null);
     this.guessForm.reset();
-
-    const previousImage = this.roundImage();
-
-    if (previousImage) URL.revokeObjectURL(previousImage);
-
-    this.roundImage.set(null);
   }
 
   private resetGameState(): void {
     this.stopTimers();
 
     this.submitting.set(false);
+    this.joining.set(false);
     this.guessResult.set(null);
+    this.answeredCorrectly.set(false);
     this.guessForm.reset();
 
     this.lobbyRemainingMs.set(0);
     this.roundRemainingMs.set(0);
-
-    const previousImage = this.roundImage();
-
-    if (previousImage) {
-      URL.revokeObjectURL(previousImage);
-    }
-
-    this.roundImage.set(null);
+    this.postRoundRemainingMs.set(0);
+    this.shareMessage.set(null);
 
     this.game.set(null);
+  }
+
+  private refreshPlayerIdentity(gameId: string): void {
+    const joinedGameId = sessionStorage.getItem(LOCAL_STORAGE_KEYS.GUESS_GAME_ID);
+
+    this.joinedGameId.set(joinedGameId);
+    this.participantId.set(
+      joinedGameId === gameId
+        ? sessionStorage.getItem(LOCAL_STORAGE_KEYS.GUESS_PARTICIPANT_ID)
+        : null,
+    );
+  }
+
+  private rememberAnsweredRound(gameId: string, roundIndex: number): void {
+    sessionStorage.setItem(LOCAL_STORAGE_KEYS.GUESS_ANSWERED_ROUND, `${gameId}:${roundIndex}`);
+  }
+
+  private wasRoundAnswered(roundIndex: number | null | undefined): boolean {
+    const gameId = this.gameId();
+
+    if (!gameId || roundIndex == null) return false;
+
+    return (
+      sessionStorage.getItem(LOCAL_STORAGE_KEYS.GUESS_ANSWERED_ROUND) === `${gameId}:${roundIndex}`
+    );
   }
 }

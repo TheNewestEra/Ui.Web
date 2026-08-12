@@ -21,6 +21,7 @@ import {
   Moon,
   Puzzle,
   RefreshCw,
+  Share2,
   Sparkle,
   Sun,
   Timer,
@@ -58,6 +59,7 @@ const usedIcons = {
   Sparkle,
   CircleX,
   Layers3,
+  Share2,
 };
 
 @Component({
