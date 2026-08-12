@@ -8,6 +8,8 @@ export interface GuessPromptStateMessage {
   error?: string;
   rounds: Round[];
   currentRound: number | null;
+  postRoundIndex: number | null;
+  postRoundRemainingMs: number | null;
   lobbyRemainingMs: number | null;
   connectedPlayers: number;
   participants: Participant[];

@@ -82,7 +82,7 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
   });
 
   readonly isHost = computed(() => {
-    return !!sessionStorage.getItem(LOCAL_STORAGE_KEYS.GUESS_HOST_TOKEN);
+    return !!sessionStorage.getItem(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_HOST_TOKEN);
   });
 
   constructor() {

@@ -1,7 +1,7 @@
 import { Component, DestroyRef, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
-import { interval, Subscription } from 'rxjs';
-import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
+import { ActivatedRoute, Router } from '@angular/router';
+import { interval, Subscription, map, filter, distinctUntilChanged } from 'rxjs';
+import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import {
   Game,
   GameStatus,
@@ -27,6 +27,7 @@ import { PageLayoutComponent } from '@layout/page-layout/page-layout';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header';
 import { ErrorAlertComponent } from '@shared/components/alert/error/error';
 import { FormFieldComponent } from '@shared/components/form/form-field/form-field';
+import { GuessPromptGameService } from '@core/services/guess-prompt-game.service';
 
 @Component({
   selector: 'app-guess-prompt',
@@ -49,10 +50,13 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
   private readonly destroyRef = inject(DestroyRef);
   private readonly guessPromptService = inject(GuessThePromptService);
   private readonly guessPromptSocket = inject(GuessPromptSocketService);
+  private readonly guessPromptGameService = inject(GuessPromptGameService);
 
   readonly GameStatus = GameStatus;
 
-  readonly gameId = this.route.snapshot.paramMap.get('gameId');
+  readonly gameId = toSignal(this.route.paramMap.pipe(map((params) => params.get('gameId'))), {
+    initialValue: null,
+  });
   readonly game = signal<Game | null>(null);
   game$ = toObservable(this.game);
 
@@ -113,14 +117,6 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
   });
 
   ngOnInit(): void {
-    if (!this.gameId) {
-      this.errorMessage.set('Game not found.');
-      this.loading.set(false);
-      return;
-    }
-
-    this.guessPromptSocket.connect(this.gameId!);
-
     this.guessPromptSocket.messages.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (message) => {
         this.handleSocketMessage(message);
@@ -131,6 +127,27 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
         this.errorMessage.set('Connection to the game was lost.');
       },
     });
+
+    this.route.paramMap
+      .pipe(
+        map((params) => params.get('gameId')),
+        filter((gameId): gameId is string => !!gameId),
+        distinctUntilChanged(),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((gameId) => {
+        this.initializeGame(gameId);
+      });
+  }
+
+  private initializeGame(gameId: string): void {
+    this.resetGameState();
+
+    this.loading.set(true);
+    this.errorMessage.set(null);
+
+    this.guessPromptSocket.disconnect();
+    this.guessPromptSocket.connect(gameId);
   }
 
   ngOnDestroy(): void {
@@ -203,6 +220,8 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
       error: message.error ?? '',
       rounds: message.rounds,
       currentRound: message.currentRound,
+      postRoundIndex: message.postRoundIndex,
+      postRoundRemainingMs: message.postRoundRemainingMs,
       lobbyRemainingMs: message.lobbyRemainingMs ?? 0,
       connectedPlayers: message.connectedPlayers ?? 0,
       participants: message.participants ?? [],
@@ -276,7 +295,7 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
       case GameStatus.Solved:
       case GameStatus.Timeout:
       case GameStatus.Error:
-        this.stopTimers();
+        this.finishGame();
         break;
     }
   }
@@ -428,7 +447,7 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
       case GameStatus.Solved:
       case GameStatus.Timeout:
       case GameStatus.Error:
-        this.stopTimers();
+        this.handleGameFinished();
         break;
     }
   }
@@ -485,14 +504,16 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
   // Lobby
   // ---------------------------------------------------------------------------
   startGame(): void {
-    if (!this.gameId || this.game()?.status !== GameStatus.Waiting) return;
+    const gameId = this.gameId();
+
+    if (!gameId || this.game()?.status !== GameStatus.Waiting) return;
 
     const hostToken = sessionStorage.getItem(LOCAL_STORAGE_KEYS.GUESS_HOST_TOKEN) ?? '';
 
     this.errorMessage.set(null);
 
     this.guessPromptService
-      .gamesIdStartPost(this.gameId, {
+      .gamesIdStartPost(gameId, {
         hostToken,
       })
       .subscribe({
@@ -502,6 +523,22 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
           this.errorMessage.set(error?.error?.error ?? 'Unable to start the game.');
         },
       });
+  }
+
+  replayGame(): void {
+    const gameId = this.gameId();
+
+    if (!gameId) return;
+
+    this.errorMessage.set(null);
+
+    this.guessPromptGameService.replay(gameId).subscribe({
+      error: (error) => {
+        console.error('Unable to replay game', error);
+
+        this.errorMessage.set(error?.error?.error ?? 'Unable to replay the game.');
+      },
+    });
   }
 
   private startLobbyCountdown(remainingMs: number): void {
@@ -530,9 +567,11 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
   // Rounds
   // ---------------------------------------------------------------------------
   private loadRoundImage(roundIndex: number): void {
-    if (!this.gameId) return;
+    const gameId = this.gameId();
 
-    this.guessPromptService.gamesIdImagesIndexGet(this.gameId, roundIndex.toString()).subscribe({
+    if (!gameId) return;
+
+    this.guessPromptService.gamesIdImagesIndexGet(gameId, roundIndex.toString()).subscribe({
       next: (image: Blob) => {
         const url = URL.createObjectURL(image);
 
@@ -577,7 +616,9 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
   // Guess
   // ---------------------------------------------------------------------------
   submitGuess(): void {
-    if (!this.gameId || this.submitting() || this.roundRemainingMs() <= 0 || this.guessForm.invalid)
+    const gameId = this.gameId();
+
+    if (!gameId || this.submitting() || this.roundRemainingMs() <= 0 || this.guessForm.invalid)
       return;
 
     const { guess } = this.guessForm.getRawValue();
@@ -588,7 +629,7 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
     this.errorMessage.set(null);
 
     this.guessPromptService
-      .gamesIdGuessPost(this.gameId, {
+      .gamesIdGuessPost(gameId, {
         index: this.currentRound() ?? 0,
         participantId: sessionStorage.getItem(LOCAL_STORAGE_KEYS.GUESS_PARTICIPANT_ID) ?? '',
         token: sessionStorage.getItem(LOCAL_STORAGE_KEYS.GUESS_TOKEN) ?? undefined,
@@ -667,5 +708,41 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
     const seconds = totalSeconds % 60;
 
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  }
+
+  private handleGameFinished(): void {
+    this.stopTimers();
+
+    this.guessPromptGameService.clearGameCredentials();
+
+    this.guessResult.set(null);
+    this.guessForm.reset();
+
+    const previousImage = this.roundImage();
+
+    if (previousImage) URL.revokeObjectURL(previousImage);
+
+    this.roundImage.set(null);
+  }
+
+  private resetGameState(): void {
+    this.stopTimers();
+
+    this.submitting.set(false);
+    this.guessResult.set(null);
+    this.guessForm.reset();
+
+    this.lobbyRemainingMs.set(0);
+    this.roundRemainingMs.set(0);
+
+    const previousImage = this.roundImage();
+
+    if (previousImage) {
+      URL.revokeObjectURL(previousImage);
+    }
+
+    this.roundImage.set(null);
+
+    this.game.set(null);
   }
 }
