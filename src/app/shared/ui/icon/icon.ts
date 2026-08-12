@@ -6,12 +6,14 @@ import {
   CircleAlert,
   CircleCheck,
   CircleUser,
+  CircleX,
   Clock,
   Copy,
   Gamepad2,
   ImageOff,
   Inbox,
   Info,
+  Layers3,
   LayoutDashboard,
   LayoutGrid,
   LucideAngularModule,
@@ -19,6 +21,7 @@ import {
   Moon,
   Puzzle,
   RefreshCw,
+  Sparkle,
   Sun,
   Timer,
   Trees,
@@ -52,6 +55,9 @@ const usedIcons = {
   Clock,
   Copy,
   ArrowRight,
+  Sparkle,
+  CircleX,
+  Layers3,
 };
 
 @Component({

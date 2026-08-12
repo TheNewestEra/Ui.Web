@@ -100,7 +100,9 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
     return this.formatTime(this.lobbyRemainingMs());
   });
 
-  readonly isHost = signal(true); // TODO: fix this at some point
+  readonly isHost = computed(() => {
+    return !!sessionStorage.getItem(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_HOST_TOKEN);
+  });
 
   constructor() {
     this.game$.subscribe((game) => {
@@ -143,7 +145,8 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
   startGame(): void {
     if (!this.gameId) return;
 
-    const hostToken = sessionStorage.getItem(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_HOST_TOKEN) ?? '';
+    const hostToken =
+      sessionStorage.getItem(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_HOST_TOKEN) ?? undefined;
 
     this.piecePuzzleService.puzzlesIdStartPost(this.gameId, { hostToken }).subscribe({
       error: (error) => {
@@ -528,8 +531,8 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
     this.puzzleSocket.send({
       type: PuzzleWsSelectRequestTypeEnum.Select,
       cell,
-      participantId: sessionStorage.getItem(this.participantStorageKey('participantId')) ?? '',
-      token: sessionStorage.getItem(this.participantStorageKey('token')) ?? undefined,
+      participantId: sessionStorage.getItem(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_PARTICIPANT_ID) ?? '',
+      token: sessionStorage.getItem(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_TOKEN) ?? undefined,
     });
   }
 

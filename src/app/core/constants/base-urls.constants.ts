@@ -9,4 +9,5 @@ export const BASE_URL = {
 
 export const WS_BASE_URL = {
   PUZZLE: 'wss://api.puzzle.ryanb.co.za',
+  GUESS: 'wss://api.guess.ryanb.co.za',
 };

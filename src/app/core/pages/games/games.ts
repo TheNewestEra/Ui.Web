@@ -3,16 +3,21 @@ import { PageLayoutComponent } from '@layout/page-layout/page-layout';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header';
 import { CardComponent } from '@shared/components/card/card';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { GamesPost202Response, GuessThePromptService } from '@thenewestera/guess-ng';
 import { finalize } from 'rxjs';
 import { FormFieldComponent } from '@shared/components/form/form-field/form-field';
 import { ButtonComponent } from '@shared/components/button/button';
 import { InputComponent } from '@shared/components/form/input/input';
-import { PiecePuzzleService, PuzzlesPost202Response } from '@thenewestera/puzzle-ng';
+import {
+  JoinResult as PuzzleJoinResult,
+  PiecePuzzleService,
+  PuzzlesPost202Response,
+} from '@thenewestera/puzzle-ng';
 import { SelectComponent, SelectOption } from '@shared/components/form/select/select';
 import { Router } from '@angular/router';
 import { ErrorAlertComponent } from '@shared/components/alert/error/error';
 import { LOCAL_STORAGE_KEYS } from '@core/constants/local-storage-keys.constants';
+import { UserStateService } from '@core/services/user-state.service';
+import { GuessPromptGameService } from '@core/services/guess-prompt-game.service';
 
 @Component({
   selector: 'app-games',
@@ -32,8 +37,9 @@ import { LOCAL_STORAGE_KEYS } from '@core/constants/local-storage-keys.constants
 })
 export class GamesPage {
   private readonly router = inject(Router);
-  private readonly guessService = inject(GuessThePromptService);
+  private readonly guessPromptGameService = inject(GuessPromptGameService);
   private readonly piecePuzzleService = inject(PiecePuzzleService);
+  private readonly userStateService = inject(UserStateService);
   private readonly fb = inject(FormBuilder);
 
   readonly gridSizes: SelectOption[] = [
@@ -81,18 +87,14 @@ export class GamesPage {
     this.guessLoading.set(true);
     this.guessErrorMessage.set(null);
 
-    this.guessService
-      .gamesPost({ theme })
+    this.guessPromptGameService
+      .start(theme)
       .pipe(
         finalize(() => {
           this.guessLoading.set(false);
         }),
       )
       .subscribe({
-        next: (response: GamesPost202Response) => {
-          console.log(response.gameId);
-        },
-
         error: (error) => {
           this.guessErrorMessage.set(
             error?.error?.error ?? 'Something went wrong. Please try again.',
@@ -124,6 +126,9 @@ export class GamesPage {
       .subscribe({
         next: (response: PuzzlesPost202Response) => {
           sessionStorage.setItem(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_HOST_TOKEN, response.hostToken);
+
+          // this.joinPuzzle(response.puzzleId);
+
           this.router.navigate(['/games/piece-puzzle', response.puzzleId]);
         },
 
@@ -133,5 +138,29 @@ export class GamesPage {
           );
         },
       });
+  }
+
+  private joinPuzzle(puzzleId: string): void {
+    var player = undefined;
+    if (this.userStateService.user() === null) {
+      player = {
+        player: this.userStateService.displayName(),
+        //colour: this.userStateService.color(),  // TODO: waiting for BE to update
+      };
+    }
+
+    // this.piecePuzzleService.puzzlesIdJoinPost(puzzleId, player).subscribe({
+    //   next: (started: PuzzleJoinResult) => {
+    //     sessionStorage.setItem(
+    //       LOCAL_STORAGE_KEYS.PIECE_PUZZLE_PARTICIPANT_ID,
+    //       started.participantId,
+    //     );
+    //     sessionStorage.setItem(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_TOKEN, started.token ?? '');
+    //   },
+    //
+    //   error: (error) => {
+    //     console.error('Failed to start puzzle', error);
+    //   },
+    // });
   }
 }
