@@ -1,22 +1,213 @@
-<app-card>
+<app-card class="flex flex-col space-y-6">
   @if (showHeading()) {
-    <div card-title>Leaderboard</div>
+    <div card-title>{{ heading() }}</div>
   }
 
-  <app-table
-    card-content
-    [columns]="columns"
-    [data]="leaderboard"
-    [striped]="true"
-    [rowHighlight]="isCurrentUser"
-    emptyMessage="No leaderboard found."
-    [loading]="loading"
-    [showRowNumbers]="false"
-    [showRank]="false"
-    [sort]="{
-      key: 'price',
-      direction: 'desc',
-    }"
-    [extraRow]="isCurrentUser"
-  />
+  @if (showHeading()) {
+    <div card-subtitle>{{ subtitle() }}</div>
+  }
+
+  <div card-content class="flex flex-col gap-5">
+    @if (usesRemoteData()) {
+      <form [formGroup]="filterForm" class="grid gap-4 sm:grid-cols-3">
+        <app-form-field label="Game type" [control]="filterForm.controls.kind">
+          <app-select formControlName="kind" [options]="kindOptions" />
+        </app-form-field>
+
+        <app-form-field label="Time period" [control]="filterForm.controls.period">
+          <app-select formControlName="period" [options]="periodOptions" />
+        </app-form-field>
+
+        <app-form-field label="Players" [control]="filterForm.controls.scope">
+          <app-select formControlName="scope" [options]="scopeOptions()" />
+        </app-form-field>
+      </form>
+
+      @if (friendRequestError()) {
+        <p class="rounded-box bg-error/10 p-3 text-sm text-error">
+          {{ friendRequestError() }}
+        </p>
+      }
+
+      @if (!isLoggedIn()) {
+        <p class="text-sm text-base-content/60">
+          Log in to add players from the leaderboard as friends.
+        </p>
+      }
+    }
+
+    <div class="overflow-x-auto rounded-box border border-base-300 bg-base-100">
+      <div
+        class="grid items-center gap-3 border-b border-base-300 bg-base-200 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-base-content/60"
+        [style.min-width]="usesRemoteData() ? '50rem' : null"
+        [style.grid-template-columns]="tableColumns()"
+      >
+        <span>Rank</span>
+        <span>Player</span>
+        @if (usesRemoteData()) {
+          <span>Game</span>
+          <span>Date</span>
+          <span>Friend status</span>
+          <span aria-hidden="true"></span>
+        }
+        <span>Score</span>
+      </div>
+
+      @if (loading()) {
+        @for (_ of skeletonRows; track $index) {
+          <div
+            class="grid items-center gap-3 border-b border-base-300 px-4 py-4 last:border-b-0"
+            [style.min-width]="usesRemoteData() ? '50rem' : null"
+            [style.grid-template-columns]="tableColumns()"
+            aria-hidden="true"
+          >
+            <span class="skeleton h-4 w-8"></span>
+            <div class="flex items-center gap-3">
+              <span class="skeleton size-4 shrink-0 rounded-full"></span>
+              <span class="skeleton h-4 w-28"></span>
+            </div>
+            @if (usesRemoteData()) {
+              <span class="skeleton h-4 w-24"></span>
+              <span class="skeleton h-4 w-20"></span>
+              <span class="skeleton h-4 w-20"></span>
+              <span class="skeleton h-8 w-24"></span>
+            }
+            <span class="skeleton h-5 w-12"></span>
+          </div>
+        }
+      } @else if (errorMessage()) {
+        <div class="flex flex-col items-center gap-3 p-8 text-center text-error">
+          <p>{{ errorMessage() }}</p>
+          <app-button size="sm" variant="ghost" (clicked)="loadLeaderboard()">Retry</app-button>
+        </div>
+      } @else {
+        @for (entry of displayedEntries(); track entry.id) {
+          <div
+            class="grid items-center gap-3 border-b border-base-300 px-4 py-4 last:border-b-0"
+            [style.min-width]="usesRemoteData() ? '50rem' : null"
+            [style.grid-template-columns]="tableColumns()"
+            [class.border-l-4]="isCurrent(entry)"
+            [class.border-l-primary]="isCurrent(entry)"
+            [class.bg-primary/10]="isCurrent(entry)"
+          >
+            <span class="font-bold tabular-nums text-base-content/60">
+              {{ entry.rank ?? '—' }}
+            </span>
+
+            <div class="flex min-w-0 items-center gap-3">
+              <span
+                class="size-4 shrink-0 rounded-full ring-2 ring-base-300"
+                [style.background-color]="entry.color"
+              ></span>
+              <span class="truncate font-semibold">{{ entry.name }}</span>
+              @if (isCurrent(entry)) {
+                <span class="text-sm font-medium text-primary">You</span>
+              }
+            </div>
+
+            @if (usesRemoteData()) {
+              <span class="text-sm font-medium">{{ entry.gamePlayed }}</span>
+              <span class="text-sm text-base-content/60">
+                {{ entry.playedAt | date: 'mediumDate' }}
+              </span>
+              <span
+                class="text-sm font-medium"
+                [class.text-primary]="isSelf(entry)"
+                [class.text-success]="!isSelf(entry) && entry.isFriend"
+              >
+                @if (isSelf(entry)) {
+                  You
+                } @else if (pendingFriendRequestIds().has(entry.id)) {
+                  Request sent
+                } @else if (entry.isFriend) {
+                  Friend
+                } @else {
+                  Not a friend
+                }
+              </span>
+              <div>
+                @if (canShowFriendRequest(entry)) {
+                  <app-button
+                    size="sm"
+                    variant="outline"
+                    [loading]="friendRequestLoadingId() === entry.id"
+                    [disabled]="!isLoggedIn() || !!friendRequestLoadingId()"
+                    (clicked)="sendFriendRequest(entry)"
+                  >
+                    Add Friend
+                  </app-button>
+                } @else {
+                  <span class="text-base-content/30">—</span>
+                }
+              </div>
+            }
+
+            <span class="text-lg font-bold tabular-nums">{{ entry.score }}</span>
+          </div>
+        } @empty {
+          <p class="p-8 text-center text-base-content/60">{{ emptyMessage() }}</p>
+        }
+
+        @if (showSeparateCurrentEntry()) {
+          @if (displayedCurrentEntry(); as me) {
+            <div class="border-t-4 border-base-300 bg-primary/10">
+              <p class="px-4 pt-3 text-xs font-semibold uppercase tracking-wide text-primary">
+                Your position
+              </p>
+              <div
+                class="grid items-center gap-3 border-l-4 border-l-primary px-4 py-4"
+                [style.min-width]="usesRemoteData() ? '50rem' : null"
+                [style.grid-template-columns]="tableColumns()"
+              >
+                <span class="font-bold tabular-nums text-base-content/60">
+                  {{ me.rank ?? '—' }}
+                </span>
+                <div class="flex min-w-0 items-center gap-3">
+                  <span
+                    class="size-4 shrink-0 rounded-full ring-2 ring-base-300"
+                    [style.background-color]="me.color"
+                  ></span>
+                  <span class="truncate font-semibold">{{ me.name }}</span>
+                  <span class="text-sm font-medium text-primary">You</span>
+                </div>
+                @if (usesRemoteData()) {
+                  <span class="text-sm font-medium">{{ me.gamePlayed }}</span>
+                  <span class="text-sm text-base-content/60">
+                    {{ me.playedAt | date: 'mediumDate' }}
+                  </span>
+                  <span class="text-sm font-medium text-primary">You</span>
+                  <span class="text-base-content/30">—</span>
+                }
+                <span class="text-lg font-bold tabular-nums">{{ me.score }}</span>
+              </div>
+            </div>
+          }
+        }
+      }
+    </div>
+
+    @if (showPagination()) {
+      <div class="join flex justify-center">
+        <button
+          type="button"
+          class="join-item btn btn-outline btn-sm"
+          [disabled]="!hasPreviousPage() || loading()"
+          (click)="previousPage()"
+        >
+          Previous
+        </button>
+        <button type="button" class="join-item btn btn-outline btn-sm pointer-events-none">
+          Page {{ page() }}
+        </button>
+        <button
+          type="button"
+          class="join-item btn btn-outline btn-sm"
+          [disabled]="!hasNextPage() || loading()"
+          (click)="nextPage()"
+        >
+          Next
+        </button>
+      </div>
+    }
+  </div>
 </app-card>

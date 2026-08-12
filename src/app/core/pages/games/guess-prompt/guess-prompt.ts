@@ -29,6 +29,10 @@ import { PageHeaderComponent } from '@shared/ui/page-header/page-header';
 import { ErrorAlertComponent } from '@shared/components/alert/error/error';
 import { FormFieldComponent } from '@shared/components/form/form-field/form-field';
 import { GuessPromptGameService } from '@core/services/guess-prompt-game.service';
+import {
+  LeaderboardComponent,
+  LeaderboardDisplayEntry,
+} from '@core/components/leaderboard/leaderboard';
 
 @Component({
   selector: 'app-guess-prompt',
@@ -42,6 +46,7 @@ import { GuessPromptGameService } from '@core/services/guess-prompt-game.service
     PageHeaderComponent,
     ErrorAlertComponent,
     FormFieldComponent,
+    LeaderboardComponent,
   ],
   templateUrl: './guess-prompt.html',
   styleUrl: './guess-prompt.css',
@@ -152,15 +157,24 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
     return index == null ? null : (game.rounds[index] ?? null);
   });
 
-  readonly leaderboardEntries = computed(() => {
+  readonly leaderboardEntries = computed<LeaderboardDisplayEntry[]>(() => {
     const game = this.game();
 
     if (!game) return [];
 
-    return game.results.map((result) => ({
-      ...result,
-      participant: game.participants.find((participant) => participant.id === result.participantId),
-    }));
+    return game.results.map((result, index) => {
+      const participant = game.participants.find(
+        (candidate) => candidate.id === result.participantId,
+      );
+
+      return {
+        id: result.participantId,
+        name: participant?.name ?? 'Unknown player',
+        color: participant?.color ?? 'transparent',
+        score: result.score,
+        rank: index + 1,
+      };
+    });
   });
 
   readonly currentParticipant = computed(() => {
