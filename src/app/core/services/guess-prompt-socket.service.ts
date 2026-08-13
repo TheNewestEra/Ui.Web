@@ -43,7 +43,6 @@ export class GuessPromptSocketService {
 
   send(message: GameWsClientMessage): void {
     if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
-      console.warn('Cannot send guess prompt message, socket is not open', message);
       return;
     }
 
