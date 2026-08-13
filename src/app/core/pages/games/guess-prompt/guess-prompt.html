@@ -189,39 +189,70 @@
         </div>
       }
 
-      @if (game?.status === GameStatus.Solved) {
-        <div class="flex flex-col items-center gap-8 py-10">
-          <div class="text-center">
-            <h2 class="text-3xl font-bold">Game Completed</h2>
+      @if (game?.status === GameStatus.Solved || game?.status === GameStatus.Timeout) {
+        <div class="grid items-start gap-8 py-10 lg:grid-cols-2">
+          <div class="flex min-w-0 flex-col gap-4">
+            <div class="relative aspect-square overflow-hidden rounded-box bg-base-200">
+              @if (resultRound()?.imageUrl; as imageUrl) {
+                <img
+                  [src]="imageUrl"
+                  [alt]="'Generated image for round ' + (resultRoundIndex() + 1)"
+                  class="size-full object-cover"
+                />
+              } @else {
+                <div class="skeleton size-full rounded-box"></div>
+              }
+            </div>
 
-            <p class="mt-2 text-base-content/60">Great game! Here are the final scores.</p>
+            <div class="join flex justify-center">
+              <button
+                type="button"
+                class="join-item btn btn-outline btn-sm"
+                [disabled]="!canViewPreviousResultRound()"
+                (click)="previousResultRound()"
+              >
+                Previous
+              </button>
+              <button type="button" class="join-item btn btn-outline btn-sm pointer-events-none">
+                Round {{ resultRoundIndex() + 1 }} of {{ game.rounds.length }}
+              </button>
+              <button
+                type="button"
+                class="join-item btn btn-outline btn-sm"
+                [disabled]="!canViewNextResultRound()"
+                (click)="nextResultRound()"
+              >
+                Next
+              </button>
+            </div>
           </div>
 
-          <app-leaderboard
-            class="w-full max-w-2xl"
-            [entries]="leaderboardEntries()"
-            [currentId]="participantId()"
-            [showHeading]="false"
-            emptyMessage="No scores were recorded."
-          />
+          <div class="flex min-w-0 flex-col gap-6">
+            <div>
+              <h2 class="text-3xl font-bold">
+                {{ game?.status === GameStatus.Solved ? 'Game Completed' : "Time's Up!" }}
+              </h2>
+              <p class="mt-2 text-base-content/60">
+                {{
+                  game?.status === GameStatus.Solved
+                    ? 'Great game! Here are the final scores.'
+                    : "The game wasn't completed in time."
+                }}
+              </p>
+            </div>
 
-          <app-button [loading]="replaying()" [disabled]="replaying()" (clicked)="replayGame()">
-            Play Again
-          </app-button>
-        </div>
-      }
+            <app-leaderboard
+              class="w-full"
+              [entries]="leaderboardEntries()"
+              [currentId]="participantId()"
+              [showHeading]="false"
+              emptyMessage="No scores were recorded."
+            />
 
-      @if (game?.status === GameStatus.Timeout) {
-        <div class="flex flex-col items-center gap-8 py-10">
-          <div class="text-center">
-            <h2 class="text-3xl font-bold">Time's Up!</h2>
-
-            <p class="mt-2 text-base-content/60">The game wasn't completed in time.</p>
+            <app-button [loading]="replaying()" [disabled]="replaying()" (clicked)="replayGame()">
+              Play Again
+            </app-button>
           </div>
-
-          <app-button [loading]="replaying()" [disabled]="replaying()" (clicked)="replayGame()">
-            Play Again
-          </app-button>
         </div>
       }
 

@@ -139,6 +139,7 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
 
   readonly guessResult = signal<GuessResult | null>(null);
   readonly answeredCorrectly = signal(false);
+  readonly resultRoundIndex = signal(0);
 
   private lobbyTimer?: Subscription;
   private roundTimer?: Subscription;
@@ -193,6 +194,16 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
     return index == null ? null : (game.rounds[index] ?? null);
   });
 
+  readonly resultRound = computed(() => {
+    return this.game()?.rounds[this.resultRoundIndex()] ?? null;
+  });
+
+  readonly canViewPreviousResultRound = computed(() => this.resultRoundIndex() > 0);
+  readonly canViewNextResultRound = computed(() => {
+    const roundCount = this.game()?.rounds.length ?? 0;
+    return this.resultRoundIndex() < roundCount - 1;
+  });
+
   readonly leaderboardEntries = computed<LeaderboardDisplayEntry[]>(() => {
     const game = this.game();
 
@@ -244,7 +255,7 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
         this.handleSocketMessage(message);
       },
 
-      error: (error) => {
+      error: () => {
         this.errorMessage.set('Connection to the game was lost.');
       },
     });
@@ -279,6 +290,9 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.stopTimers();
+
+    const gameId = this.gameId();
+    if (gameId) this.guessPromptGameService.clearGameCredentials(gameId);
 
     this.guessPromptSocket.disconnect();
   }
@@ -995,6 +1009,16 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   }
 
+  previousResultRound(): void {
+    if (!this.canViewPreviousResultRound()) return;
+    this.resultRoundIndex.update((index) => index - 1);
+  }
+
+  nextResultRound(): void {
+    if (!this.canViewNextResultRound()) return;
+    this.resultRoundIndex.update((index) => index + 1);
+  }
+
   private handleGameFinished(): void {
     this.stopTimers();
 
@@ -1010,6 +1034,7 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
     this.replaying.set(false);
     this.guessResult.set(null);
     this.answeredCorrectly.set(false);
+    this.resultRoundIndex.set(0);
     this.guessForm.reset();
 
     this.lobbyRemainingMs.set(0);
