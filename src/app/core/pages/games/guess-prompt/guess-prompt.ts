@@ -415,7 +415,6 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
    * `join`/`guess`/`reveal` on any more, so it's handled centrally here
    * instead — same reasoning as Piece Puzzle's own `handleError()`. */
   private handleSocketError(message: GameWsErrorMessage): void {
-    console.error(`Guess Prompt ${message.action} failed:`, message.error);
 
     if (message.action === GameWsErrorMessageActionEnum.Join) {
       this.joining.set(false);
