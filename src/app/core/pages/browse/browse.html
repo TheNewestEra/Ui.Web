@@ -7,13 +7,13 @@
   <form [formGroup]="filterForm" class="flex flex-wrap gap-4">
     <div class="w-full sm:w-56">
       <app-form-field label="Game type" [control]="filterForm.controls.kind">
-        <app-select formControlName="kind" [options]="kindOptions"/>
+        <app-select formControlName="kind" [options]="kindOptions" />
       </app-form-field>
     </div>
 
     <div class="w-full sm:w-56">
       <app-form-field label="Sort by" [control]="filterForm.controls.sort">
-        <app-select formControlName="sort" [options]="sortOptions"/>
+        <app-select formControlName="sort" [options]="sortOptions" />
       </app-form-field>
     </div>
   </form>
@@ -32,7 +32,7 @@
     </div>
   } @else if (entries().length === 0) {
     <div class="flex flex-col items-center gap-3 p-16 text-base-content/60">
-      <app-icon name="inbox"/>
+      <app-icon name="inbox" />
 
       <p>No games found. Try a different filter.</p>
     </div>
@@ -59,7 +59,7 @@
                 (error)="onImageLoad(entry.id)"
               />
             } @else {
-              <app-icon name="image-off"/>
+              <app-icon name="image-off" />
             }
           </div>
 
@@ -68,7 +68,7 @@
           </div>
 
           <p card-subtitle class="flex items-center gap-1.5">
-            <app-icon [name]="kindIcon(entry.kind)"/>
+            <app-icon [name]="kindIcon(entry.kind)" />
             {{ kindLabel(entry.kind) }}
           </p>
 
@@ -121,25 +121,21 @@
       <button
         type="button"
         class="join-item btn btn-outline btn-sm"
-        [disabled]="!hasPreviousPage()"
+        [disabled]="!hasPreviousPage() || loading()"
         (click)="previousPage()"
       >
-        <app-icon name="chevron-left"/>
         Previous
       </button>
-
-      <button type="button" class="join-item btn btn-outline btn-sm btn-active pointer-events-none">
+      <button type="button" class="join-item btn btn-outline btn-sm pointer-events-none">
         Page {{ page() }}
       </button>
-
       <button
         type="button"
         class="join-item btn btn-outline btn-sm"
-        [disabled]="!hasNextPage()"
+        [disabled]="!hasNextPage() || loading()"
         (click)="nextPage()"
       >
         Next
-        <app-icon name="chevron-right"/>
       </button>
     </div>
   }
