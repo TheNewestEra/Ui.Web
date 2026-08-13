@@ -1,6 +1,6 @@
 import { Injectable, signal } from '@angular/core';
 import { WS_BASE_URL } from '@core/constants/base-urls.constants';
-import { GuessPromptSocketMessage } from '@core/models/guess-prompt-socket.interface';
+import { GameWsClientMessage, GameWsMessage } from '@thenewestera/guess-ng';
 import { Subject } from 'rxjs';
 
 @Injectable({
@@ -11,7 +11,7 @@ export class GuessPromptSocketService {
 
   readonly connected = signal(false);
 
-  private readonly messageSubject = new Subject<GuessPromptSocketMessage>();
+  private readonly messageSubject = new Subject<GameWsMessage>();
 
   readonly messages = this.messageSubject.asObservable();
 
@@ -27,7 +27,7 @@ export class GuessPromptSocketService {
     });
 
     this.socket.addEventListener('message', (event) => {
-      const message = JSON.parse(event.data) as GuessPromptSocketMessage;
+      const message = JSON.parse(event.data) as GameWsMessage;
 
       this.messageSubject.next(message);
     });
@@ -39,6 +39,14 @@ export class GuessPromptSocketService {
     this.socket.addEventListener('error', (error) => {
       console.error('Guess Prompt WebSocket error', error);
     });
+  }
+
+  send(message: GameWsClientMessage): void {
+    if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
+      return;
+    }
+
+    this.socket.send(JSON.stringify(message));
   }
 
   disconnect(): void {

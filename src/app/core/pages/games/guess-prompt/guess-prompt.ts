@@ -5,20 +5,37 @@ import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-i
 import {
   Game,
   GameStatus,
+  GameWsErrorMessage,
+  GameWsErrorMessageActionEnum,
+  GameWsErrorMessageTypeEnum,
+  GameWsGuessMessageTypeEnum,
+  GameWsGuessRequestTypeEnum,
+  GameWsGuessResultMessage,
+  GameWsGuessResultMessageTypeEnum,
+  GameWsJoinRequestTypeEnum,
+  GameWsJoinResultMessage,
+  GameWsJoinResultMessageTypeEnum,
+  GameWsMessage,
+  GameWsPlayerTypingMessageTypeEnum,
+  GameWsPromptsReadyMessageTypeEnum,
+  GameWsRevealedMessageTypeEnum,
+  GameWsRoundReadyMessage,
+  GameWsRoundReadyMessageTypeEnum,
+  GameWsRoundStatusMessage,
+  GameWsRoundStatusMessageTypeEnum,
+  GameWsStateMessage,
+  GameWsStateMessageTypeEnum,
   GuessResult,
   GuessThePromptService,
   RoundStatus,
+  WsPlayerJoinedMessageTypeEnum,
+  WsPresenceMessage,
+  WsPresenceMessageTypeEnum,
+  WsStatusMessage,
+  WsStatusMessageTypeEnum,
 } from '@thenewestera/guess-ng';
 import { LOCAL_STORAGE_KEYS } from '@core/constants/local-storage-keys.constants';
 import { GuessPromptSocketService } from '@core/services/guess-prompt-socket.service';
-import {
-  GuessPromptSocketMessage,
-  GuessPromptStateMessage,
-  GuessPromptStatusMessage,
-  GuessPromptRoundReadyMessage,
-  GuessPromptRoundStatusMessage,
-  GuessPromptPresenceMessage,
-} from '@core/models/guess-prompt-socket.interface';
 import { CardComponent } from '@shared/components/card/card';
 import { IconComponent } from '@shared/ui/icon/icon';
 import { ButtonComponent } from '@shared/components/button/button';
@@ -255,6 +272,11 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
     this.loading.set(true);
     this.errorMessage.set(null);
 
+    // The host is already joined by the time this page loads — POST
+    // /games and POST /games/{id}/replay auto-join them server-side (see
+    // `GuessPromptGameService`), so `refreshPlayerIdentity()` above already
+    // picks up their credentials. Everyone else still opts in explicitly
+    // via the "Join game" button (see `joinGame()`).
     this.guessPromptSocket.disconnect();
     this.guessPromptSocket.connect(gameId);
   }
@@ -265,14 +287,14 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
     this.guessPromptSocket.disconnect();
   }
 
-  private handleSocketMessage(message: GuessPromptSocketMessage): void {
+  private handleSocketMessage(message: GameWsMessage): void {
     switch (message.type) {
       /**
        * Initial state and full state snapshots.
        *
        * This is the most important WebSocket message.
        */
-      case 'state':
+      case GameWsStateMessageTypeEnum.State:
         this.handleState(message);
         break;
 
@@ -282,38 +304,139 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
        * waiting -> playing
        * playing -> solved
        */
-      case 'status':
+      case WsStatusMessageTypeEnum.Status:
         this.handleStatus(message);
         break;
 
       /**
        * An individual round's image is ready.
        */
-      case 'round_ready':
+      case GameWsRoundReadyMessageTypeEnum.RoundReady:
         this.handleRoundReady(message);
         break;
 
       /**
        * A round has completed or timed out.
        */
-      case 'round_status':
+      case GameWsRoundStatusMessageTypeEnum.RoundStatus:
         this.handleRoundStatus(message);
         break;
 
-      case 'presence':
+      case WsPresenceMessageTypeEnum.Presence:
         this.handlePresence(message);
         break;
 
-      case 'prompts_ready':
-      case 'guess':
-      case 'revealed':
-      case 'player_joined':
-      case 'player_typing':
+      /**
+       * Direct reply to our own `join` message — see `joinGame()` and
+       * `initializeGame()`'s host auto-join.
+       */
+      case GameWsJoinResultMessageTypeEnum.JoinResult:
+        this.handleJoinResult(message);
+        break;
+
+      /**
+       * Direct reply to our own `guess` message — our own private view of
+       * the result (the real prompt, once correct, plus our running
+       * total). Distinct from the public `guess` broadcast below, which
+       * every connected client (including us) also receives but which
+       * never carries the prompt.
+       */
+      case GameWsGuessResultMessageTypeEnum.GuessResult:
+        this.handleGuessResult(message);
+        break;
+
+      /**
+       * Direct reply to a rejected `join`/`guess`/`reveal` message — the WS
+       * equivalent of the 4xx bodies those actions used to return over
+       * HTTP.
+       */
+      case GameWsErrorMessageTypeEnum.Error:
+        this.handleSocketError(message);
+        break;
+
+      case GameWsPromptsReadyMessageTypeEnum.PromptsReady:
+      case GameWsGuessMessageTypeEnum.Guess:
+      case GameWsRevealedMessageTypeEnum.Revealed:
+      case WsPlayerJoinedMessageTypeEnum.PlayerJoined:
+      case GameWsPlayerTypingMessageTypeEnum.PlayerTyping:
         break;
     }
   }
 
-  private handleState(message: GuessPromptStateMessage): void {
+  /** Persists the participantId/token every later `guess`/`reveal` message
+   * must carry, scoped to this game via `GUESS_GAME_ID` (see
+   * `hasJoined()`/`refreshPlayerIdentity()`). */
+  private handleJoinResult(message: GameWsJoinResultMessage): void {
+    const gameId = this.gameId();
+
+    if (!gameId) return;
+
+    sessionStorage.setItem(LOCAL_STORAGE_KEYS.GUESS_PARTICIPANT_ID, message.participantId);
+    sessionStorage.setItem(LOCAL_STORAGE_KEYS.GUESS_TOKEN, message.token ?? '');
+    sessionStorage.setItem(LOCAL_STORAGE_KEYS.GUESS_GAME_ID, gameId);
+    sessionStorage.setItem(LOCAL_STORAGE_KEYS.GUESS_PLAYER_NAME, this.userState.displayName());
+
+    this.joining.set(false);
+    this.refreshPlayerIdentity(gameId);
+  }
+
+  /** Direct reply to our own `guess` message (see `submitGuess()`) — the WS
+   * equivalent of the old POST /games/{id}/guess response body. */
+  private handleGuessResult(message: GameWsGuessResultMessage): void {
+    this.submitting.set(false);
+    this.guessResult.set({
+      correct: message.correct,
+      prompt: message.prompt,
+      score: message.score,
+      totalScore: message.totalScore,
+    });
+
+    /**
+     * The backend determines the score.
+     *
+     * A correct guess does NOT mean we manually finish
+     * the round here. The backend will eventually broadcast
+     * round_status: complete.
+     *
+     * We only stop the local timer so the user can't keep
+     * submitting while waiting for that socket event.
+     */
+    if (message.correct) {
+      this.guessForm.reset();
+      this.answeredCorrectly.set(true);
+
+      const gameId = this.gameId();
+
+      if (gameId) this.rememberAnsweredRound(gameId, this.currentRound() ?? 0);
+    }
+  }
+
+  /** There's no per-call `.subscribe({error})` to catch a rejected
+   * `join`/`guess`/`reveal` on any more, so it's handled centrally here
+   * instead — same reasoning as Piece Puzzle's own `handleError()`. */
+  private handleSocketError(message: GameWsErrorMessage): void {
+
+    if (message.action === GameWsErrorMessageActionEnum.Join) {
+      this.joining.set(false);
+      this.errorMessage.set(message.error);
+      return;
+    }
+
+    if (message.action === GameWsErrorMessageActionEnum.Guess) {
+      this.submitting.set(false);
+
+      if (message.error === 'you already answered this round correctly') {
+        this.guessForm.reset();
+        this.answeredCorrectly.set(true);
+
+        const gameId = this.gameId();
+
+        if (gameId) this.rememberAnsweredRound(gameId, this.currentRound() ?? 0);
+      }
+    }
+  }
+
+  private handleState(message: GameWsStateMessage): void {
     const previousRound = this.game()?.currentRound;
     const nextRound = message.currentRound;
 
@@ -358,7 +481,14 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
     if (roundIndex == null) return;
   }
 
-  private handleStatus(message: GuessPromptStatusMessage): void {
+  private handleStatus(message: WsStatusMessage): void {
+    // `WsStatusMessage.status` is `WsStatusMessageStatusEnum` — a separate
+    // (structurally identical) generated enum from `GameStatus`, since the
+    // shared `status`/`player_joined`/`presence`/`pong` WS shapes live in
+    // their own OpenAPI component rather than this service's own. Same cast
+    // Piece Puzzle's own `handleStatus()` uses for `PuzzleStatus`.
+    const status = message.status as unknown as GameStatus;
+
     this.game.update((game) => {
       if (!game) {
         return game;
@@ -366,12 +496,12 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
 
       return {
         ...game,
-        status: message.status,
+        status,
         error: message.error ?? '',
       };
     });
 
-    switch (message.status) {
+    switch (status) {
       case GameStatus.Waiting:
         this.handleWaitingState();
         break;
@@ -388,7 +518,7 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
     }
   }
 
-  private handlePresence(message: GuessPromptPresenceMessage): void {
+  private handlePresence(message: WsPresenceMessage): void {
     this.game.update((game) => {
       if (!game) return game;
 
@@ -399,7 +529,7 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
     });
   }
 
-  private handleRoundReady(message: GuessPromptRoundReadyMessage): void {
+  private handleRoundReady(message: GameWsRoundReadyMessage): void {
     this.game.update((game) => {
       if (!game) return game;
 
@@ -420,7 +550,7 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
     // round_status: active is now responsible for that.
   }
 
-  private handleRoundStatus(message: GuessPromptRoundStatusMessage): void {
+  private handleRoundStatus(message: GameWsRoundStatusMessage): void {
     // --------------------------------------------------------------------------
     // ROUND ACTIVE
     //
@@ -525,7 +655,7 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
   // ---------------------------------------------------------------------------
   // Game state synchronization
   // ---------------------------------------------------------------------------
-  private syncGameState(message: GuessPromptStateMessage): void {
+  private syncGameState(message: GameWsStateMessage): void {
     switch (message.status) {
       case GameStatus.Queued:
       case GameStatus.Generating:
@@ -570,10 +700,10 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
     this.syncCurrentRound({
       ...game,
       status: GameStatus.Playing,
-    } as GuessPromptStateMessage);
+    } as GameWsStateMessage);
   }
 
-  private syncCurrentRound(message: GuessPromptStateMessage): void {
+  private syncCurrentRound(message: GameWsStateMessage): void {
     const roundIndex = message.currentRound;
 
     if (roundIndex == null) return;
@@ -603,7 +733,7 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
     }
   }
 
-  private syncPostRound(message: GuessPromptStateMessage): void {
+  private syncPostRound(message: GameWsStateMessage): void {
     const roundIndex = message.postRoundIndex;
 
     if (roundIndex == null) return;
@@ -639,6 +769,14 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
       });
   }
 
+  /** Sends the `join` message directly — the socket's been open since this
+   * page loaded, so there's no race to send into. The reply comes back as a
+   * `join_result`/`error` message instead of an Observable — see
+   * `handleJoinResult()`/`handleSocketError()`. `color` is guest-only (see
+   * `GameWsJoinRequestSchema`'s doc comment on the backend) — omitted for a
+   * logged-in caller, whose account color is always authoritative, same
+   * split `GuessPromptGameService.createColor()` uses for the host's own
+   * auto-join at creation/replay time. */
   joinGame(): void {
     const gameId = this.gameId();
 
@@ -647,17 +785,11 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
     this.joining.set(true);
     this.errorMessage.set(null);
 
-    this.guessPromptGameService
-      .join(gameId)
-      .pipe(finalize(() => this.joining.set(false)))
-      .subscribe({
-        next: () => {
-          this.refreshPlayerIdentity(gameId);
-        },
-        error: (error) => {
-          this.errorMessage.set(error?.error?.error ?? 'Unable to join the game.');
-        },
-      });
+    this.guessPromptSocket.send({
+      type: GameWsJoinRequestTypeEnum.Join,
+      player: this.userState.displayName(),
+      color: this.userState.isLoggedIn() ? undefined : (this.userState.color() ?? undefined),
+    });
   }
 
   async shareGame(): Promise<void> {
@@ -803,6 +935,8 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
   // ---------------------------------------------------------------------------
   // Guess
   // ---------------------------------------------------------------------------
+  /** Reply comes back as a `guess_result`/`error` message instead of an
+   * Observable — see `handleGuessResult()`/`handleSocketError()`. */
   submitGuess(): void {
     const gameId = this.gameId();
 
@@ -815,45 +949,13 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
     this.submitting.set(true);
     this.errorMessage.set(null);
 
-    this.guessPromptService
-      .gamesIdGuessPost(gameId, {
-        index: this.currentRound() ?? 0,
-        participantId: sessionStorage.getItem(LOCAL_STORAGE_KEYS.GUESS_PARTICIPANT_ID) ?? '',
-        token: sessionStorage.getItem(LOCAL_STORAGE_KEYS.GUESS_TOKEN) ?? undefined,
-        guess: guess,
-      })
-      .subscribe({
-        next: (result: GuessResult) => {
-          this.submitting.set(false);
-          this.guessResult.set(result);
-
-          /**
-           * The backend determines the score.
-           *
-           * A correct guess does NOT mean we manually finish
-           * the round here. The backend will eventually broadcast
-           * round_status: complete.
-           *
-           * We only stop the local timer so the user can't keep
-           * submitting while waiting for that socket event.
-           */
-          if (result.correct) {
-            this.guessForm.reset();
-            this.answeredCorrectly.set(true);
-            this.rememberAnsweredRound(gameId, this.currentRound() ?? 0);
-          }
-        },
-
-        error: (error) => {
-          this.submitting.set(false);
-
-          if (error?.error?.error === 'you already answered this round correctly') {
-            this.guessForm.reset();
-            this.answeredCorrectly.set(true);
-            this.rememberAnsweredRound(gameId, this.currentRound() ?? 0);
-          }
-        },
-      });
+    this.guessPromptSocket.send({
+      type: GameWsGuessRequestTypeEnum.Guess,
+      index: this.currentRound() ?? 0,
+      participantId: sessionStorage.getItem(LOCAL_STORAGE_KEYS.GUESS_PARTICIPANT_ID) ?? '',
+      token: sessionStorage.getItem(LOCAL_STORAGE_KEYS.GUESS_TOKEN) ?? undefined,
+      guess,
+    });
   }
 
   // ---------------------------------------------------------------------------
