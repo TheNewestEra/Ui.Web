@@ -372,10 +372,6 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
       message.participantId,
     );
     sessionStorage.setItem(this.storageKey(LOCAL_STORAGE_KEYS.GUESS_TOKEN), message.token ?? '');
-    sessionStorage.setItem(
-      this.storageKey(LOCAL_STORAGE_KEYS.GUESS_PLAYER_NAME),
-      this.userState.displayName(),
-    );
 
     this.joining.set(false);
     this.refreshPlayerIdentity(gameId);
@@ -406,9 +402,7 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
       this.guessForm.reset();
       this.answeredCorrectly.set(true);
 
-      const gameId = this.gameId();
-
-      if (gameId) this.rememberAnsweredRound(gameId, this.currentRound() ?? 0);
+      this.rememberAnsweredRound(this.currentRound() ?? 0);
     }
   }
 
@@ -429,9 +423,7 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
         this.guessForm.reset();
         this.answeredCorrectly.set(true);
 
-        const gameId = this.gameId();
-
-        if (gameId) this.rememberAnsweredRound(gameId, this.currentRound() ?? 0);
+        this.rememberAnsweredRound(this.currentRound() ?? 0);
       }
     }
   }
@@ -1060,8 +1052,11 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
       });
   }
 
-  private rememberAnsweredRound(gameId: string, roundIndex: number): void {
-    sessionStorage.setItem(`${LOCAL_STORAGE_KEYS.GUESS_ANSWERED_ROUND}:${gameId}`, `${roundIndex}`);
+  private rememberAnsweredRound(roundIndex: number): void {
+    sessionStorage.setItem(
+      this.storageKey(LOCAL_STORAGE_KEYS.GUESS_ANSWERED_ROUND),
+      `${roundIndex}`,
+    );
   }
 
   private wasRoundAnswered(roundIndex: number | null | undefined): boolean {

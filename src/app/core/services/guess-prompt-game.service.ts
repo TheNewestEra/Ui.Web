@@ -43,10 +43,6 @@ export class GuessPromptGameService {
       this.storageKey(LOCAL_STORAGE_KEYS.GUESS_TOKEN, response.gameId),
       response.token ?? '',
     );
-    sessionStorage.setItem(
-      this.storageKey(LOCAL_STORAGE_KEYS.GUESS_PLAYER_NAME, response.gameId),
-      this.userStateService.displayName(),
-    );
 
     void this.router.navigate(['/games/guess-prompt', response.gameId]);
   }
@@ -70,7 +66,6 @@ export class GuessPromptGameService {
   clearParticipantCredentials(gameId: string): void {
     sessionStorage.removeItem(this.storageKey(LOCAL_STORAGE_KEYS.GUESS_PARTICIPANT_ID, gameId));
     sessionStorage.removeItem(this.storageKey(LOCAL_STORAGE_KEYS.GUESS_TOKEN, gameId));
-    sessionStorage.removeItem(this.storageKey(LOCAL_STORAGE_KEYS.GUESS_PLAYER_NAME, gameId));
     sessionStorage.removeItem(this.storageKey(LOCAL_STORAGE_KEYS.GUESS_ANSWERED_ROUND, gameId));
   }
 

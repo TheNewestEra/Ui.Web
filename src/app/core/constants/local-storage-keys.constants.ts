@@ -13,6 +13,5 @@ export const LOCAL_STORAGE_KEYS = {
   GUESS_PARTICIPANT_ID: 'guessParticipantId',
   GUESS_TOKEN: 'guessToken',
   GUESS_HOST_TOKEN: 'guessHostToken',
-  GUESS_PLAYER_NAME: 'guessPlayerName',
   GUESS_ANSWERED_ROUND: 'guessAnsweredRound',
 };
