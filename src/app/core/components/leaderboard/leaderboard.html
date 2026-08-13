@@ -39,13 +39,12 @@
     <div class="overflow-x-auto rounded-box border border-base-300 bg-base-100">
       <div
         class="grid items-center gap-3 border-b border-base-300 bg-base-200 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-base-content/60"
-        [style.min-width]="usesRemoteData() ? '50rem' : null"
+        [style.min-width]="usesRemoteData() ? '42rem' : null"
         [style.grid-template-columns]="tableColumns()"
       >
         <span>Rank</span>
         <span>Player</span>
         @if (usesRemoteData()) {
-          <span>Game</span>
           <span>Date</span>
           <span>Friend status</span>
           <span aria-hidden="true"></span>
@@ -57,7 +56,7 @@
         @for (_ of skeletonRows; track $index) {
           <div
             class="grid items-center gap-3 border-b border-base-300 px-4 py-4 last:border-b-0"
-            [style.min-width]="usesRemoteData() ? '50rem' : null"
+            [style.min-width]="usesRemoteData() ? '42rem' : null"
             [style.grid-template-columns]="tableColumns()"
             aria-hidden="true"
           >
@@ -67,7 +66,6 @@
               <span class="skeleton h-4 w-28"></span>
             </div>
             @if (usesRemoteData()) {
-              <span class="skeleton h-4 w-24"></span>
               <span class="skeleton h-4 w-20"></span>
               <span class="skeleton h-4 w-20"></span>
               <span class="skeleton h-8 w-24"></span>
@@ -84,7 +82,7 @@
         @for (entry of displayedEntries(); track entry.id) {
           <div
             class="grid items-center gap-3 border-b border-base-300 px-4 py-4 last:border-b-0"
-            [style.min-width]="usesRemoteData() ? '50rem' : null"
+            [style.min-width]="usesRemoteData() ? '42rem' : null"
             [style.grid-template-columns]="tableColumns()"
             [class.border-l-4]="isCurrent(entry)"
             [class.border-l-primary]="isCurrent(entry)"
@@ -106,7 +104,6 @@
             </div>
 
             @if (usesRemoteData()) {
-              <span class="text-sm font-medium">{{ entry.gamePlayed }}</span>
               <span class="text-sm text-base-content/60">
                 {{ entry.playedAt | date: 'mediumDate' }}
               </span>
@@ -156,7 +153,7 @@
               </p>
               <div
                 class="grid items-center gap-3 border-l-4 border-l-primary px-4 py-4"
-                [style.min-width]="usesRemoteData() ? '50rem' : null"
+                [style.min-width]="usesRemoteData() ? '42rem' : null"
                 [style.grid-template-columns]="tableColumns()"
               >
                 <span class="font-bold tabular-nums text-base-content/60">
@@ -171,7 +168,6 @@
                   <span class="text-sm font-medium text-primary">You</span>
                 </div>
                 @if (usesRemoteData()) {
-                  <span class="text-sm font-medium">{{ me.gamePlayed }}</span>
                   <span class="text-sm text-base-content/60">
                     {{ me.playedAt | date: 'mediumDate' }}
                   </span>

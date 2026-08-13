@@ -31,8 +31,7 @@ export interface LeaderboardDisplayEntry {
   color: string;
   score: number;
   rank: number | null;
-  gamePlayed?: string;
-  playedAt?: string;
+  playedAt?: number;
   isFriend?: boolean;
 }
 
@@ -126,7 +125,7 @@ export class LeaderboardComponent implements OnInit {
   });
   readonly tableColumns = computed(() =>
     this.usesRemoteData()
-      ? '3rem minmax(8rem, 1fr) minmax(8rem, 1fr) 7rem 7rem 7rem 5rem'
+      ? '3rem minmax(10rem, 16rem) minmax(7rem, 1fr) 7rem 7rem 5rem'
       : '3rem minmax(0, 1fr) auto',
   );
 
@@ -240,27 +239,24 @@ export class LeaderboardComponent implements OnInit {
           if (requestId !== this.requestId) return;
 
           this.loadedEntries.set(
-            response.entries.map((entry, index) => ({
+            response.entries.map((entry) => ({
+              rank: entry.rank,
               id: entry.userId,
               name: entry.username,
-              color: '#000000', // entry.color,  // TODO: BE needs to send the colour
+              color: entry.color,
               score: entry.score,
-              rank: entry.rank,
-              // TODO(BE): Return the game played, score date, and friendship status with each
-              // leaderboard entry. These deterministic placeholders should be removed once the
-              // leaderboard contract exposes the real values.
-              ...this.mockEntryDetails(entry.userId, index),
+              playedAt: entry.lastPlayedAt,
+              isFriend: entry.isFriend,
             })),
           );
           this.loadedCurrentEntry.set(
             response.me
               ? {
+                  rank: response.me.rank,
                   id: response.me.userId,
                   name: response.me.username,
-                  color: '#000000', // response.me.color,  // TODO: BE needs to send the colour
+                  color: response.me.color,
                   score: response.me.score,
-                  rank: response.me.rank,
-                  ...this.mockEntryDetails(response.me.userId, response.entries.length),
                 }
               : null,
           );
@@ -272,18 +268,5 @@ export class LeaderboardComponent implements OnInit {
           this.errorMessage.set(error?.error?.error ?? 'Unable to load the leaderboard.');
         },
       });
-  }
-
-  private mockEntryDetails(userId: string, index: number) {
-    // TODO: remove this after BE has implemented
-    const games = ['Guess the Prompt', 'Piece Puzzle'];
-    const dates = ['2026-08-12', '2026-08-09', '2026-08-03', '2026-07-28'];
-    const seed = [...userId].reduce((total, character) => total + character.charCodeAt(0), index);
-
-    return {
-      gamePlayed: games[seed % games.length],
-      playedAt: dates[seed % dates.length],
-      isFriend: seed % 3 === 0,
-    };
   }
 }
