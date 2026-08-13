@@ -10,7 +10,7 @@
   </option>
 
   @for (option of options(); track option.value) {
-    <option [value]="option.value">
+    <option [value]="option.value" [disabled]="option.disabled">
       {{ option.label }}
     </option>
   }

@@ -37,6 +37,10 @@ import {
   InvitesService,
 } from '@thenewestera/friends-ng';
 import { UserStateService } from '@core/services/user-state.service';
+import {
+  LeaderboardComponent,
+  LeaderboardDisplayEntry,
+} from '@core/components/leaderboard/leaderboard';
 
 @Component({
   selector: 'app-guess-prompt',
@@ -50,6 +54,7 @@ import { UserStateService } from '@core/services/user-state.service';
     PageHeaderComponent,
     ErrorAlertComponent,
     FormFieldComponent,
+    LeaderboardComponent,
   ],
   templateUrl: './guess-prompt.html',
   styleUrl: './guess-prompt.css',
@@ -75,6 +80,7 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
   readonly loading = signal(true);
   readonly submitting = signal(false);
   readonly joining = signal(false);
+  readonly replaying = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly shareMessage = signal<string | null>(null);
   readonly inviteMessage = signal<string | null>(null);
@@ -170,15 +176,24 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
     return index == null ? null : (game.rounds[index] ?? null);
   });
 
-  readonly leaderboardEntries = computed(() => {
+  readonly leaderboardEntries = computed<LeaderboardDisplayEntry[]>(() => {
     const game = this.game();
 
     if (!game) return [];
 
-    return game.results.map((result) => ({
-      ...result,
-      participant: game.participants.find((participant) => participant.id === result.participantId),
-    }));
+    return game.results.map((result, index) => {
+      const participant = game.participants.find(
+        (candidate) => candidate.id === result.participantId,
+      );
+
+      return {
+        id: result.participantId,
+        name: participant?.name ?? 'Unknown player',
+        color: participant?.color ?? 'transparent',
+        score: result.score,
+        rank: index + 1,
+      };
+    });
   });
 
   readonly currentParticipant = computed(() => {
@@ -706,17 +721,21 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
   replayGame(): void {
     const gameId = this.gameId();
 
-    if (!gameId) return;
+    if (!gameId || this.replaying()) return;
 
+    this.replaying.set(true);
     this.errorMessage.set(null);
 
-    this.guessPromptGameService.replay(gameId).subscribe({
-      error: (error) => {
-        console.error('Unable to replay game', error);
+    this.guessPromptGameService
+      .replay(gameId)
+      .pipe(finalize(() => this.replaying.set(false)))
+      .subscribe({
+        error: (error) => {
+          console.error('Unable to replay game', error);
 
-        this.errorMessage.set(error?.error?.error ?? 'Unable to replay the game.');
-      },
-    });
+          this.errorMessage.set(error?.error?.error ?? 'Unable to replay the game.');
+        },
+      });
   }
 
   private startLobbyCountdown(remainingMs: number): void {
@@ -896,6 +915,7 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
 
     this.submitting.set(false);
     this.joining.set(false);
+    this.replaying.set(false);
     this.guessResult.set(null);
     this.answeredCorrectly.set(false);
     this.guessForm.reset();

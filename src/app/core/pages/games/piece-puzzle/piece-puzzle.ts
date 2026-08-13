@@ -1,27 +1,40 @@
 import { Component, computed, DestroyRef, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import {
-  MoveResult,
   PiecePuzzleService,
   Puzzle,
-  PuzzlesIdMovePostRequest,
   PuzzleStatus,
+  PuzzleWsDeselectRequestTypeEnum,
+  PuzzleWsErrorMessage,
+  PuzzleWsErrorMessageActionEnum,
+  PuzzleWsErrorMessageTypeEnum,
+  PuzzleWsJoinResultMessage,
+  PuzzleWsJoinResultMessageTypeEnum,
+  PuzzleWsMessage,
+  PuzzleWsMoveMessage,
+  PuzzleWsMoveMessageTypeEnum,
+  PuzzleWsMoveRequestTypeEnum,
+  PuzzleWsSelectRequestTypeEnum,
+  PuzzleWsSolvedMessage,
+  PuzzleWsSolvedMessageTypeEnum,
+  PuzzleWsStateMessage,
+  PuzzleWsStateMessageTypeEnum,
+  PuzzleWsTileDeselectedMessage,
+  PuzzleWsTileDeselectedMessageTypeEnum,
+  PuzzleWsTileSelectedMessage,
+  PuzzleWsTileSelectedMessageTypeEnum,
+  PuzzleWsTimeoutMessageTypeEnum,
+  WsPresenceMessage,
+  WsPresenceMessageTypeEnum,
+  WsStatusMessage,
+  WsStatusMessageTypeEnum,
 } from '@thenewestera/puzzle-ng';
 import { ErrorAlertComponent } from '@shared/components/alert/error/error';
 import { PageLayoutComponent } from '@layout/page-layout/page-layout';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header';
 import { CardComponent } from '@shared/components/card/card';
 import { UserStateService } from '@core/services/user-state.service';
-import { finalize } from 'rxjs';
 import { PiecePuzzleSocketService } from '@core/services/piece-puzzle-socket.service';
-import {
-  PuzzleMoveMessage,
-  PuzzlePresenceMessage,
-  PuzzleSocketMessage,
-  PuzzleSolvedMessage,
-  PuzzleStateMessage,
-  PuzzleStatusMessage,
-} from '@core/models/piece-puzzle-socket.interface';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { ButtonComponent } from '@shared/components/button/button';
 import { LOCAL_STORAGE_KEYS } from '@core/constants/local-storage-keys.constants';
@@ -46,6 +59,8 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
 
   private timerInterval?: ReturnType<typeof setInterval>;
 
+  private pendingMove: { cellA: number; cellB: number } | null = null;
+
   readonly PuzzleStatus = PuzzleStatus;
 
   private readonly destroyRef = inject(DestroyRef);
@@ -63,6 +78,10 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
   readonly userColor = this.userStateService.color;
   readonly moving = signal(false);
   readonly solved = signal(false);
+
+  readonly tileSelections = signal<ReadonlyMap<number, { player: string; color: string }>>(
+    new Map(),
+  );
 
   readonly gameEnded = computed(() => {
     const status = this.game()?.status;
@@ -99,7 +118,13 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
     }
 
     this.loading.set(false);
-    this.puzzleSocket.connect(this.gameId);
+
+    const alreadyJoined = !!sessionStorage.getItem(this.participantStorageKey('participantId'));
+    const player = alreadyJoined ? undefined : this.userStateService.displayName();
+    const color =
+      alreadyJoined || this.userStateService.isLoggedIn() ? undefined : this.userColor();
+
+    this.puzzleSocket.connect(this.gameId, player, color!);
 
     this.puzzleSocket.messages.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((message) => {
       this.handleSocketMessage(message);
@@ -146,11 +171,13 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
 
     if (selected === null) {
       this.selectedTile.set(index);
+      this.broadcastTileSelection(index);
       return;
     }
 
     if (selected === index) {
       this.selectedTile.set(null);
+      this.broadcastTileDeselection();
       return;
     }
 
@@ -166,36 +193,70 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   }
 
-  private handleSocketMessage(message: PuzzleSocketMessage): void {
+  private handleSocketMessage(message: PuzzleWsMessage): void {
     switch (message.type) {
-      case 'state':
+      case PuzzleWsStateMessageTypeEnum.State:
         this.handleState(message);
         break;
 
-      case 'status':
+      case WsStatusMessageTypeEnum.Status:
         this.handleStatus(message);
         break;
 
-      case 'move':
+      case PuzzleWsMoveMessageTypeEnum.Move:
         this.handleMove(message);
         break;
 
-      case 'solved':
+      case PuzzleWsSolvedMessageTypeEnum.Solved:
         this.handleSolved(message);
         break;
 
-      case 'timeout':
+      case PuzzleWsTimeoutMessageTypeEnum.Timeout:
         this.handleTimeout();
         break;
 
-      case 'presence':
+      case WsPresenceMessageTypeEnum.Presence:
         this.handlePresence(message);
+        break;
+
+      case PuzzleWsTileSelectedMessageTypeEnum.TileSelected:
+        this.handleTileSelected(message);
+        break;
+
+      case PuzzleWsTileDeselectedMessageTypeEnum.TileDeselected:
+        this.handleTileDeselected(message);
+        break;
+
+      case PuzzleWsJoinResultMessageTypeEnum.JoinResult:
+        this.handleJoinResult(message);
+        break;
+
+      case PuzzleWsErrorMessageTypeEnum.Error:
+        this.handleError(message);
         break;
     }
   }
 
-  private handleState(message: PuzzleStateMessage): void {
-    this.updateTimers(message!);
+  /** A full state snapshot, sent on connect and after any status-changing
+   * action — including `message.selections`, which is how a reconnecting
+   * client (e.g. a page refresh mid-game) restores the live "who's about to
+   * move what" picture instead of just missing whatever it wasn't connected
+   * to see broadcast live. Rebuilt from scratch every time rather than
+   * merged with whatever was already in `tileSelections`, since this is a
+   * full snapshot and the previous local state might be stale (e.g. this is
+   * the very first message after connecting). */
+  private handleState(message: PuzzleWsStateMessage): void {
+    this.updateTimers(message);
+
+    this.tileSelections.set(
+      new Map(message.selections.map((s) => [s.cell, { player: s.player, color: s.color }])),
+    );
+
+    const myParticipantId = sessionStorage.getItem(this.participantStorageKey('participantId'));
+    this.selectedTile.set(
+      message.selections.find((s) => s.participantId === myParticipantId)?.cell ?? null,
+    );
+
     this.game.set({
       id: message.id,
       theme: message.theme ?? '',
@@ -212,10 +273,12 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
       score: message.score ?? 0,
       solvedBy: message.solvedBy ?? '',
       connectedPlayers: message.connectedPlayers,
+      participants: message.participants,
+      selections: message.selections,
     });
   }
 
-  private handleMove(message: PuzzleMoveMessage): void {
+  private handleMove(message: PuzzleWsMoveMessage): void {
     this.game.update((game) => {
       if (!game) return game;
 
@@ -228,9 +291,24 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
         board,
       };
     });
+
+    this.clearTileSelections(message.cellA, message.cellB);
+
+    // This broadcast reaches every connected client, including whoever sent
+    // the move — that's how the sender learns their own move succeeded now
+    // that there's no direct request/response for a WS send.
+    if (
+      this.pendingMove &&
+      this.pendingMove.cellA === message.cellA &&
+      this.pendingMove.cellB === message.cellB
+    ) {
+      this.pendingMove = null;
+      this.moving.set(false);
+      this.selectedTile.set(null);
+    }
   }
 
-  private handleSolved(message: PuzzleSolvedMessage): void {
+  private handleSolved(message: PuzzleWsSolvedMessage): void {
     this.game.update((game) => {
       if (!game) return game;
 
@@ -244,8 +322,11 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
       };
     });
 
+    this.pendingMove = null;
+    this.moving.set(false);
     this.remainingMs.set(message.remainingMs);
     this.solved.set(true);
+    this.tileSelections.set(new Map());
     this.stopTimer();
   }
 
@@ -261,12 +342,75 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
       };
     });
 
+    this.pendingMove = null;
+    this.moving.set(false);
     this.selectedTile.set(null);
+    this.tileSelections.set(new Map());
 
     this.stopTimer();
   }
 
-  private handlePresence(message: PuzzlePresenceMessage): void {
+  /** Direct reply to our own `join` message (see `PiecePuzzleSocketService.
+   * connect()`) — persists the participantId/token every later `move`/
+   * `select` message must carry, scoped to this puzzle so they can't leak
+   * into a different one played in the same browser session. */
+  private handleJoinResult(message: PuzzleWsJoinResultMessage): void {
+    sessionStorage.setItem(this.participantStorageKey('participantId'), message.participantId);
+    sessionStorage.setItem(this.participantStorageKey('token'), message.token ?? '');
+  }
+
+  /** Direct reply to a rejected `join`/`move`/`select` message — the WS
+   * equivalent of the 4xx bodies those actions used to return over HTTP.
+   * There's no per-call `.subscribe({error})` to catch this on any more, so
+   * it's handled centrally here instead. */
+  private handleError(message: PuzzleWsErrorMessage): void {
+    console.error(`Puzzle ${message.action} failed:`, message.error);
+
+    if (message.action === PuzzleWsErrorMessageActionEnum.Move) {
+      this.pendingMove = null;
+      this.moving.set(false);
+    }
+  }
+
+  private handleTileSelected(message: PuzzleWsTileSelectedMessage): void {
+    this.tileSelections.update((selections) => {
+      const next = new Map(selections);
+      next.set(message.cell, { player: message.player, color: message.color });
+      return next;
+    });
+  }
+
+  /** The flip side of `handleTileSelected` — see `broadcastTileDeselection()`
+   * for when this fires for our own deselect. Also clears `selectedTile` if
+   * it names the cell we think *we* currently have selected: normally a
+   * no-op (we already cleared it locally before broadcasting), but it keeps
+   * a second tab on the same participant in sync too, since a participant
+   * only ever has one active selection server-side. */
+  private handleTileDeselected(message: PuzzleWsTileDeselectedMessage): void {
+    this.tileSelections.update((selections) => {
+      if (!selections.has(message.cell)) return selections;
+
+      const next = new Map(selections);
+      next.delete(message.cell);
+      return next;
+    });
+
+    if (this.selectedTile() === message.cell) {
+      this.selectedTile.set(null);
+    }
+  }
+
+  private clearTileSelections(...cells: number[]): void {
+    this.tileSelections.update((selections) => {
+      if (!cells.some((cell) => selections.has(cell))) return selections;
+
+      const next = new Map(selections);
+      for (const cell of cells) next.delete(cell);
+      return next;
+    });
+  }
+
+  private handlePresence(message: WsPresenceMessage): void {
     this.game.update((game) => {
       if (!game) return game;
 
@@ -277,13 +421,13 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
     });
   }
 
-  private handleStatus(message: PuzzleStatusMessage): void {
+  private handleStatus(message: WsStatusMessage): void {
     this.game.update((game) => {
       if (!game) return game;
 
       return {
         ...game,
-        status: message.status,
+        status: message.status as unknown as PuzzleStatus,
         error: message.error ?? '',
       };
     });
@@ -311,18 +455,17 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
     });
   }
 
-  private updateTimers(puzzle: Puzzle | null): void {
-    if (puzzle === null) return;
+  private updateTimers(puzzleStateMessage: PuzzleWsStateMessage): void {
     this.stopTimer();
 
-    if (puzzle.status === PuzzleStatus.Waiting) {
-      this.lobbyRemainingMs.set(puzzle.lobbyRemainingMs ?? 0);
+    if (puzzleStateMessage.status === PuzzleStatus.Waiting) {
+      this.lobbyRemainingMs.set(puzzleStateMessage.lobbyRemainingMs ?? 0);
       this.startLobbyTimer();
       return;
     }
 
-    if (puzzle.status === PuzzleStatus.Playing) {
-      this.remainingMs.set(puzzle.remainingMs ?? 0);
+    if (puzzleStateMessage.status === PuzzleStatus.Playing) {
+      this.remainingMs.set(puzzleStateMessage.remainingMs ?? 0);
       this.startGameTimer();
       return;
     }
@@ -367,30 +510,56 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
     if (!this.gameId || this.moving()) return;
 
     this.moving.set(true);
+    this.pendingMove = { cellA, cellB };
 
-    const moveRequest: PuzzlesIdMovePostRequest = {
-      cellA: cellA,
-      cellB: cellB,
+    // `moving` and `selectedTile` clear once this move's own broadcast
+    // comes back (see `handleMove()`) or it's rejected (see `handleError()`)
+    // — there's no direct reply to a WS send the way there was for the old
+    // POST /puzzles/:id/move's response.
+    this.puzzleSocket.send({
+      type: PuzzleWsMoveRequestTypeEnum.Move,
+      cellA,
+      cellB,
+      participantId: sessionStorage.getItem(this.participantStorageKey('participantId')) ?? '',
+      token: sessionStorage.getItem(this.participantStorageKey('token')) ?? undefined,
+    });
+  }
+
+  private broadcastTileSelection(cell: number): void {
+    if (!this.gameId) return;
+
+    this.puzzleSocket.send({
+      type: PuzzleWsSelectRequestTypeEnum.Select,
+      cell,
       participantId: sessionStorage.getItem(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_PARTICIPANT_ID) ?? '',
       token: sessionStorage.getItem(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_TOKEN) ?? undefined,
-    };
+    });
+  }
 
-    this.piecePuzzleService
-      .puzzlesIdMovePost(this.gameId, moveRequest)
-      .pipe(
-        finalize(() => {
-          this.moving.set(false);
-        }),
-      )
-      .subscribe({
-        next: (moveResponse: MoveResult) => {
-          this.selectedTile.set(null);
-        },
+  /** No `cell` to send — a participant only ever has one active selection,
+   * so the server already knows which one to clear (see game-worker's
+   * puzzle.model.ts `deselectTile()`) and broadcasts a `tile_deselected`
+   * naming it back to every connected client, including us. */
+  private broadcastTileDeselection(): void {
+    if (!this.gameId) return;
 
-        error: (error) => {
-          console.error('Failed to move tiles', error);
-        },
-      });
+    this.puzzleSocket.send({
+      type: PuzzleWsDeselectRequestTypeEnum.Deselect,
+      participantId: sessionStorage.getItem(this.participantStorageKey('participantId')) ?? '',
+      token: sessionStorage.getItem(this.participantStorageKey('token')) ?? undefined,
+    });
+  }
+
+  /** Scopes the anonymous-guest participant credentials to this puzzle's id
+   * — a bare, unscoped key would leak one puzzle's participantId/token into
+   * the next puzzle played in the same browser session. */
+  private participantStorageKey(kind: 'participantId' | 'token'): string {
+    const base =
+      kind === 'participantId'
+        ? LOCAL_STORAGE_KEYS.PIECE_PUZZLE_PARTICIPANT_ID
+        : LOCAL_STORAGE_KEYS.PIECE_PUZZLE_TOKEN;
+
+    return `${base}:${this.gameId}`;
   }
 
   private stopTimer(): void {

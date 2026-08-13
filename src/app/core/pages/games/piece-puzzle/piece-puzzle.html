@@ -79,7 +79,7 @@
           }
 
           @if (puzzleImage(); as image) {
-            <div class="grid aspect-square w-full max-w-xl overflow-hidden rounded-box">
+            <div class="grid aspect-square w-full max-w-lg overflow-hidden rounded-box">
               <img [src]="image" alt="Puzzle" class="block w-full" />
             </div>
           }
@@ -108,7 +108,7 @@
         @if (puzzleImage(); as image) {
           <div class="flex flex-col items-center gap-3">
             <div
-              class="grid aspect-square w-full max-w-xl overflow-hidden rounded-box"
+              class="grid aspect-square w-full max-w-lg overflow-hidden rounded-box"
               [style.grid-template-columns]="'repeat(' + game.gridSize + ', 1fr)'"
             >
               @for (tile of game.board; track $index) {
@@ -134,6 +134,15 @@
                       class="absolute inset-0"
                       [style.background-color]="userColor()"
                       style="opacity: 0.25"
+                    ></span>
+                  }
+
+                  @if (tileSelections().get($index); as selection) {
+                    <span
+                      class="absolute inset-0"
+                      [style.background-color]="selection.color"
+                      [title]="selection.player + ' selected this tile'"
+                      style="opacity: 0.35"
                     ></span>
                   }
                 </button>
@@ -164,7 +173,7 @@
           </div>
 
           @if (puzzleImage(); as image) {
-            <div class="grid aspect-square w-full max-w-xl overflow-hidden rounded-box">
+            <div class="grid aspect-square w-full max-w-lg overflow-hidden rounded-box">
               <img [src]="image" alt="Completed puzzle" class="block w-full" />
             </div>
           }
@@ -190,7 +199,7 @@
           </div>
 
           @if (puzzleImage(); as image) {
-            <div class="grid aspect-square w-full max-w-xl overflow-hidden rounded-box">
+            <div class="grid aspect-square w-full max-w-lg overflow-hidden rounded-box">
               <img [src]="image" alt="Puzzle" class="block w-full" />
             </div>
           }

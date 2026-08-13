@@ -3,8 +3,30 @@
 
   <section class="w-full flex flex-col gap-2">
     @if (loading()) {
-      <div class="flex min-h-96 items-center justify-center">
-        <span class="loading loading-spinner loading-lg"></span>
+      <div class="flex flex-col gap-5 py-1" aria-busy="true" aria-label="Loading game">
+        <div class="flex items-center justify-between">
+          <span class="skeleton h-5 w-32"></span>
+          <span class="skeleton h-10 w-24"></span>
+        </div>
+
+        <div class="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
+          <div class="skeleton aspect-square w-full rounded-box"></div>
+          <div class="flex flex-col gap-6">
+            <div class="rounded-box border border-base-300 bg-base-100 p-6">
+              <div class="skeleton h-7 w-3/4"></div>
+              <div class="skeleton mt-3 h-4 w-full"></div>
+              <div class="skeleton mt-2 h-4 w-2/3"></div>
+              <div class="skeleton mt-8 h-12 w-full"></div>
+              <div class="skeleton mt-4 h-10 w-full"></div>
+            </div>
+
+            <div class="rounded-box border border-base-300 bg-base-100 p-6">
+              <div class="skeleton h-6 w-36"></div>
+              <div class="skeleton mt-5 h-12 w-full"></div>
+              <div class="skeleton mt-3 h-12 w-full"></div>
+            </div>
+          </div>
+        </div>
       </div>
     } @else if (errorMessage()) {
       <app-error-alert>
@@ -12,12 +34,22 @@
       </app-error-alert>
     } @else if (game(); as game) {
       @if (game?.status === GameStatus.Generating || game.status === GameStatus.Queued) {
-        <div class="flex flex-col items-center gap-3 py-12 text-center">
-          <span class="loading loading-spinner loading-lg"></span>
+        <div class="flex flex-col gap-6 py-8" aria-busy="true">
+          <div class="text-center">
+            <h2 class="text-xl font-semibold">Generating images</h2>
+            <p class="mt-2 text-base-content/60">Almost ready...</p>
+          </div>
 
-          <h2 class="text-xl font-semibold">Generating images</h2>
-
-          <p class="text-base-content/60">Almost ready...</p>
+          <div class="mx-auto grid w-full max-w-4xl grid-cols-1 gap-6 lg:grid-cols-2">
+            <div class="skeleton aspect-square w-full rounded-box"></div>
+            <div class="rounded-box border border-base-300 bg-base-100 p-6">
+              <div class="skeleton h-7 w-3/4"></div>
+              <div class="skeleton mt-3 h-4 w-full"></div>
+              <div class="skeleton mt-2 h-4 w-2/3"></div>
+              <div class="skeleton mt-8 h-12 w-full"></div>
+              <div class="skeleton mt-4 h-10 w-full"></div>
+            </div>
+          </div>
         </div>
       }
 
@@ -165,65 +197,17 @@
             <p class="mt-2 text-base-content/60">Great game! Here are the final scores.</p>
           </div>
 
-          <div class="w-full max-w-2xl">
-            @if (game?.results?.length ?? 0) {
-              <div class="overflow-hidden rounded-box border border-base-300 bg-base-100">
-                <div class="border-b border-base-300 bg-base-200 px-5 py-3">
-                  <div class="flex items-center justify-between">
-                    <span
-                      class="text-sm font-semibold uppercase tracking-wide text-base-content/60"
-                    >
-                      Player
-                    </span>
+          <app-leaderboard
+            class="w-full max-w-2xl"
+            [entries]="leaderboardEntries()"
+            [currentId]="participantId()"
+            [showHeading]="false"
+            emptyMessage="No scores were recorded."
+          />
 
-                    <span
-                      class="text-sm font-semibold uppercase tracking-wide text-base-content/60"
-                    >
-                      Score
-                    </span>
-                  </div>
-                </div>
-
-                <div class="flex flex-col">
-                  @for (entry of leaderboardEntries(); track entry.participantId; let i = $index) {
-                    <div
-                      class="flex items-center justify-between border-b border-base-300 px-5 py-4 last:border-b-0"
-                      [class.bg-success/5]="i === 0"
-                    >
-                      <div class="flex items-center gap-4">
-                        <div
-                          class="flex size-8 items-center justify-center rounded-full bg-base-200 text-sm font-bold"
-                          [class.bg-success]="i === 0"
-                          [class.text-success-content]="i === 0"
-                        >
-                          {{ i + 1 }}
-                        </div>
-
-                        <span
-                          class="size-3 shrink-0 rounded-full ring-2 ring-base-300"
-                          [style.background-color]="entry.participant?.color"
-                        ></span>
-
-                        <span class="font-semibold">
-                          {{ entry.participant?.name ?? 'Unknown player' }}
-                        </span>
-                      </div>
-
-                      <span class="text-lg font-bold tabular-nums">
-                        {{ entry.score }}
-                      </span>
-                    </div>
-                  }
-                </div>
-              </div>
-            } @else {
-              <div class="rounded-box border border-base-300 bg-base-200 px-6 py-8 text-center">
-                <p class="text-base-content/60">No scores were recorded.</p>
-              </div>
-            }
-          </div>
-
-          <app-button (click)="replayGame()"> Play Again </app-button>
+          <app-button [loading]="replaying()" [disabled]="replaying()" (clicked)="replayGame()">
+            Play Again
+          </app-button>
         </div>
       }
 
@@ -235,7 +219,9 @@
             <p class="mt-2 text-base-content/60">The game wasn't completed in time.</p>
           </div>
 
-          <app-button (click)="replayGame()"> Play Again </app-button>
+          <app-button [loading]="replaying()" [disabled]="replaying()" (clicked)="replayGame()">
+            Play Again
+          </app-button>
         </div>
       }
 
@@ -262,68 +248,67 @@
             </div>
           }
           @if (game.postRoundIndex != null) {
-            <div class="flex flex-col items-center gap-6 text-center">
-              <div>
-                <p class="text-sm text-base-content/60">
-                  Round {{ game.postRoundIndex + 1 }} of {{ game.rounds.length }} complete
-                </p>
-                <h2 class="mt-2 text-2xl font-bold">The correct prompt was</h2>
-                <p class="mt-2 text-xl">{{ postRound()?.prompt ?? 'Waiting for the prompt…' }}</p>
-              </div>
+            <div class="flex items-center justify-between">
+              <p class="text-sm text-base-content/60">
+                Round {{ game.postRoundIndex + 1 }} of {{ game.rounds.length }} complete
+              </p>
 
-              <div class="rounded-box bg-base-200 px-6 py-4">
-                <p class="text-sm text-base-content/60">
+              <div class="rounded-box bg-base-200 px-4 py-2 text-right">
+                <p class="text-xs text-base-content/60">
                   {{
                     game.postRoundIndex + 1 < game.rounds.length
                       ? 'Next round starts in'
                       : 'Final results in'
                   }}
                 </p>
-                <p class="text-4xl font-bold tabular-nums">{{ formattedPostRoundTime() }}</p>
+                <p class="text-xl font-bold tabular-nums">{{ formattedPostRoundTime() }}</p>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
+              <div
+                class="relative flex aspect-square w-full items-center justify-center overflow-hidden rounded-box bg-base-200"
+              >
+                @if (displayedRound()?.imageUrl; as imageUrl) {
+                  <div class="skeleton absolute inset-0 rounded-box"></div>
+                  <img
+                    [src]="imageUrl"
+                    alt="Resolved round"
+                    class="relative block h-full w-full object-cover"
+                  />
+                } @else {
+                  <div class="skeleton absolute inset-0 rounded-box"></div>
+                }
               </div>
 
-              @if (displayedRound()?.imageUrl; as imageUrl) {
-                <img
-                  [src]="imageUrl"
-                  alt="Resolved round"
-                  class="aspect-square w-full max-w-md rounded-box object-cover"
-                />
-              }
+              <div class="flex min-w-0 flex-col gap-6">
+                <app-card class="w-full">
+                  <div card-title>Round complete</div>
+                  <div card-subtitle>The correct prompt was</div>
 
-              <div class="w-full max-w-2xl text-left">
-                <h3 class="mb-3 text-xl font-bold">Leaderboard</h3>
+                  <div card-content class="flex flex-col gap-5">
+                    <p class="text-xl font-semibold leading-relaxed">
+                      {{ postRound()?.prompt ?? 'Waiting for the prompt…' }}
+                    </p>
 
-                @if (game.results.length) {
-                  <div class="overflow-hidden rounded-box border border-base-300 bg-base-100">
-                    @for (
-                      entry of leaderboardEntries();
-                      track entry.participantId;
-                      let i = $index
-                    ) {
-                      <div
-                        class="flex items-center justify-between border-b border-base-300 px-5 py-4 last:border-b-0"
-                        [class.bg-primary/10]="entry.participantId === participantId()"
-                      >
-                        <div class="flex items-center gap-3">
-                          <span class="w-5 text-sm text-base-content/60">{{ i + 1 }}.</span>
-                          <span
-                            class="size-3 shrink-0 rounded-full ring-2 ring-base-300"
-                            [style.background-color]="entry.participant?.color"
-                            [attr.aria-label]="(entry.participant?.name ?? 'Player') + ' colour'"
-                          ></span>
-                          <span class="font-semibold">
-                            {{ entry.participant?.name ?? 'Unknown player' }}
-                          </span>
-                        </div>
-                        <span class="font-bold tabular-nums">{{ entry.score }}</span>
-                      </div>
-                    }
+                    <div class="rounded-box bg-base-200 px-5 py-4">
+                      <p class="text-sm text-base-content/60">
+                        {{
+                          game.postRoundIndex + 1 < game.rounds.length
+                            ? 'Get ready for the next round.'
+                            : 'Final results are being prepared.'
+                        }}
+                      </p>
+                    </div>
                   </div>
-                } @else {
-                  <p class="rounded-box bg-base-200 p-5 text-center text-base-content/60">
-                    Scores will appear here.
-                  </p>
-                }
+                </app-card>
+
+                <app-leaderboard
+                  class="w-full"
+                  [entries]="leaderboardEntries()"
+                  [currentId]="participantId()"
+                  subtitle="Scores after this round"
+                />
               </div>
             </div>
           } @else if (game.currentRound != null) {
@@ -333,7 +318,7 @@
               </p>
 
               <div
-                class="rounded-box bg-base-200 text-xl font-bold tabular-nums"
+                class="rounded-box bg-base-200 px-4 py-2 text-xl font-bold tabular-nums"
                 [class.text-error]="roundRemainingMs() <= 5000"
               >
                 {{ formattedRoundTime() }}
@@ -348,118 +333,101 @@
 
             <div class="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
               <div
-                class="flex aspect-square w-full items-center justify-center overflow-hidden rounded-box bg-base-200"
+                class="relative flex aspect-square w-full items-center justify-center overflow-hidden rounded-box bg-base-200"
               >
                 @if (displayedRound()?.imageUrl; as imageUrl) {
+                  <div class="skeleton absolute inset-0 rounded-box"></div>
                   <img
                     [src]="imageUrl"
                     alt="Guess the generated image"
-                    class="block h-full w-full object-cover"
+                    class="relative block h-full w-full object-cover"
                   />
                 } @else {
-                  <span class="loading loading-spinner loading-lg"></span>
+                  <div class="skeleton absolute inset-0 rounded-box"></div>
                 }
               </div>
 
-              @if (!isSpectator()) {
-                <app-card class="w-full">
-                  <div card-title>What prompt generated this image?</div>
+              <div class="flex min-w-0 flex-col gap-6">
+                @if (!isSpectator()) {
+                  <app-card class="w-full">
+                    <div card-title>What prompt generated this image?</div>
 
-                  <div card-subtitle>
-                    Type your best guess and submit it before the timer runs out.
-                  </div>
+                    <div card-subtitle>
+                      Type your best guess and submit it before the timer runs out.
+                    </div>
 
-                  <div class="flex flex-col gap-4" card-content>
-                    <form
-                      [formGroup]="guessForm"
-                      (ngSubmit)="submitGuess()"
-                      class="flex flex-col gap-4"
-                    >
-                      <app-form-field label="Guess" [control]="guessForm.controls.guess">
-                        <app-input
-                          formControlName="guess"
-                          [readonly]="!canSubmitGuess()"
-                          placeholder="What do you think the image represents?"
-                        />
-                      </app-form-field>
-
-                      <app-button
-                        type="submit"
-                        [loading]="submitting()"
-                        [disabled]="!canSubmitGuess() || guessForm.invalid"
+                    <div class="flex flex-col gap-4" card-content>
+                      <form
+                        [formGroup]="guessForm"
+                        (ngSubmit)="submitGuess()"
+                        class="flex flex-col gap-4"
                       >
-                        Submit Guess
-                      </app-button>
-                    </form>
+                        <app-form-field label="Guess" [control]="guessForm.controls.guess">
+                          <app-input
+                            formControlName="guess"
+                            [readonly]="!canSubmitGuess()"
+                            placeholder="What do you think the image represents?"
+                          />
+                        </app-form-field>
 
-                    @if (answeredCorrectly()) {
-                      <div class="rounded-box bg-success/10 p-4 text-success">
-                        <div class="flex items-center gap-3">
-                          <app-icon name="circle-check" class="size-5" />
+                        <app-button
+                          type="submit"
+                          [loading]="submitting()"
+                          [disabled]="!canSubmitGuess() || guessForm.invalid"
+                        >
+                          Submit Guess
+                        </app-button>
+                      </form>
 
-                          <div>
-                            <p class="font-semibold">Correct!</p>
-                            <p class="text-sm">
-                              You earned {{ guessResult()?.score ?? 0 }} points this round. Your
-                              total score is
-                              {{ guessResult()?.totalScore ?? currentPlayerScore() }}.
-                            </p>
-                            <p class="mt-1 text-sm">Waiting for the other players to finish.</p>
+                      @if (answeredCorrectly()) {
+                        <div class="rounded-box bg-success/10 p-4 text-success">
+                          <div class="flex items-center gap-3">
+                            <app-icon name="circle-check" class="size-5" />
+
+                            <div>
+                              <p class="font-semibold">Correct!</p>
+                              <p class="text-sm">
+                                You earned {{ guessResult()?.score ?? 0 }} points this round. Your
+                                total score is
+                                {{ guessResult()?.totalScore ?? currentPlayerScore() }}.
+                              </p>
+                              <p class="mt-1 text-sm">Waiting for the other players to finish.</p>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    } @else if (guessResult(); as result) {
-                      <div class="rounded-box bg-error/10 p-4 text-error">
-                        <div class="flex items-center gap-3">
-                          <app-icon name="circle-x" class="size-5" />
+                      } @else if (guessResult(); as result) {
+                        <div class="rounded-box bg-error/10 p-4 text-error">
+                          <div class="flex items-center gap-3">
+                            <app-icon name="circle-x" class="size-5" />
 
-                          <div>
-                            <p class="font-semibold">Not quite.</p>
-                            <p class="text-sm">Keep trying before the timer runs out.</p>
+                            <div>
+                              <p class="font-semibold">Not quite.</p>
+                              <p class="text-sm">Keep trying before the timer runs out.</p>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    }
-                  </div>
-                </app-card>
-              } @else {
-                <div class="w-full overflow-hidden rounded-box border border-base-300 bg-base-100">
-                  <div class="border-b border-base-300 px-5 py-4">
-                    <h3 class="text-xl font-bold">Leaderboard</h3>
-                    <p class="mt-1 text-sm text-base-content/60">Live scores for this game</p>
-                  </div>
-
-                  @if (leaderboardEntries().length) {
-                    @for (
-                      entry of leaderboardEntries();
-                      track entry.participantId;
-                      let i = $index
-                    ) {
-                      <div
-                        class="flex items-center justify-between border-b border-base-300 px-5 py-4 last:border-b-0"
-                      >
-                        <div class="flex items-center gap-3">
-                          <span class="w-5 text-sm text-base-content/60">{{ i + 1 }}.</span>
-                          <span
-                            class="size-3 rounded-full ring-2 ring-base-300"
-                            [style.background-color]="entry.participant?.color"
-                          ></span>
-                          <span class="font-semibold">
-                            {{ entry.participant?.name ?? 'Unknown player' }}
-                          </span>
-                        </div>
-                        <span class="font-bold tabular-nums">{{ entry.score }}</span>
-                      </div>
-                    }
-                  } @else {
-                    <p class="p-6 text-center text-base-content/60">No scores yet.</p>
-                  }
-                </div>
-              }
+                      }
+                    </div>
+                  </app-card>
+                } @else {
+                  <app-leaderboard
+                    class="w-full"
+                    [entries]="leaderboardEntries()"
+                    [currentId]="participantId()"
+                    subtitle="Live scores for this game"
+                  />
+                }
+              </div>
             </div>
           } @else {
-            <div class="flex min-h-48 items-center justify-center">
-              <span class="loading loading-spinner loading-lg"></span>
+            <div class="grid grid-cols-1 items-start gap-6 lg:grid-cols-2" aria-busy="true">
+              <div class="skeleton aspect-square w-full rounded-box"></div>
+              <div class="rounded-box border border-base-300 bg-base-100 p-6">
+                <div class="skeleton h-7 w-3/4"></div>
+                <div class="skeleton mt-3 h-4 w-full"></div>
+                <div class="skeleton mt-8 h-12 w-full"></div>
+                <div class="skeleton mt-4 h-10 w-full"></div>
+              </div>
             </div>
           }
         </div>

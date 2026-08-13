@@ -1,0 +1,5 @@
+.card > figure:empty,
+.card-body > .card-title:empty,
+.card-body > .card-subtitle:empty {
+  display: none;
+}

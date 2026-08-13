@@ -13,7 +13,7 @@ export class UserStateService {
   readonly isLoggedIn = computed(() => this._user() !== null);
 
   readonly displayName = computed(
-    () => this._user()?.username ?? localStorage.getItem(LOCAL_STORAGE_KEYS.USER) ?? 'Unknown',
+    () => this._user()?.username ?? localStorage.getItem(LOCAL_STORAGE_KEYS.USERNAME) ?? 'Unknown',
   );
 
   readonly color = computed(
@@ -49,7 +49,7 @@ export class UserStateService {
         const randomNumbers = Array.from({ length: 3 }, () => Math.floor(Math.random() * 10)).join(
           '',
         );
-        localStorage.setItem(LOCAL_STORAGE_KEYS.USER, `Guest_${randomNumbers}`);
+        localStorage.setItem(LOCAL_STORAGE_KEYS.USERNAME, `Guest_${randomNumbers}`);
       }
       return null;
     }

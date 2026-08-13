@@ -1,9 +1,14 @@
-import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DecimalPipe } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
-import { ApiCatalogGet200Response, BrowseService, CatalogEntry } from '@thenewestera/browse-ng';
+import {
+  ApiCatalogGet200Response,
+  BrowseService,
+  CatalogEntry,
+  CatalogSort,
+} from '@thenewestera/browse-ng';
 import { PageLayoutComponent } from '@layout/page-layout/page-layout';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header';
 import { CardComponent } from '@shared/components/card/card';
@@ -50,13 +55,14 @@ export class BrowsePage {
 
   readonly filterForm = this.fb.nonNullable.group({
     kind: ['all'],
-    sort: ['recent'],
+    sort: [CatalogSort.Recent],
   });
 
   readonly loading = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly entries = signal<CatalogEntry[]>([]);
   readonly offset = signal(0);
+  readonly loadedImageIds = signal<ReadonlySet<string>>(new Set());
 
   readonly page = computed(() => this.offset() / PAGE_SIZE + 1);
   readonly hasPreviousPage = computed(() => this.offset() > 0);
@@ -78,11 +84,12 @@ export class BrowsePage {
 
     this.loading.set(true);
     this.errorMessage.set(null);
+    this.loadedImageIds.set(new Set());
 
     this.browseService
       .apiCatalogGet(
         kind === 'all' ? undefined : (kind as 'guess' | 'puzzle'),
-        sort as 'recent' | 'rating',
+        sort as CatalogSort,
         undefined,
         PAGE_SIZE,
         this.offset(),
@@ -125,10 +132,12 @@ export class BrowsePage {
     return kind === 'guess' ? 'gamepad-2' : 'puzzle';
   }
 
-  thumbnailSrc(entry: CatalogEntry): string {
-    const basePath = this.browseService.configuration.basePath ?? '';
+  isImageLoaded(entryId: string): boolean {
+    return this.loadedImageIds().has(entryId);
+  }
 
-    return `${basePath}/api/catalog/${encodeURIComponent(entry.id)}/thumbnail`;
+  onImageLoad(entryId: string): void {
+    this.loadedImageIds.update((ids) => new Set(ids).add(entryId));
   }
 
   filledStars(entry: CatalogEntry): number {

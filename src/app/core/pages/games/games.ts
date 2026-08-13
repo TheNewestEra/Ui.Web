@@ -127,7 +127,7 @@ export class GamesPage {
         next: (response: PuzzlesPost202Response) => {
           sessionStorage.setItem(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_HOST_TOKEN, response.hostToken);
 
-          this.joinPuzzle(response.puzzleId);
+          // this.joinPuzzle(response.puzzleId);
 
           this.router.navigate(['/games/piece-puzzle', response.puzzleId]);
         },
@@ -149,18 +149,18 @@ export class GamesPage {
       };
     }
 
-    this.piecePuzzleService.puzzlesIdJoinPost(puzzleId, player).subscribe({
-      next: (started: PuzzleJoinResult) => {
-        sessionStorage.setItem(
-          LOCAL_STORAGE_KEYS.PIECE_PUZZLE_PARTICIPANT_ID,
-          started.participantId,
-        );
-        sessionStorage.setItem(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_TOKEN, started.token ?? '');
-      },
-
-      error: (error) => {
-        console.error('Failed to start puzzle', error);
-      },
-    });
+    // this.piecePuzzleService.puzzlesIdJoinPost(puzzleId, player).subscribe({
+    //   next: (started: PuzzleJoinResult) => {
+    //     sessionStorage.setItem(
+    //       LOCAL_STORAGE_KEYS.PIECE_PUZZLE_PARTICIPANT_ID,
+    //       started.participantId,
+    //     );
+    //     sessionStorage.setItem(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_TOKEN, started.token ?? '');
+    //   },
+    //
+    //   error: (error) => {
+    //     console.error('Failed to start puzzle', error);
+    //   },
+    // });
   }
 }
