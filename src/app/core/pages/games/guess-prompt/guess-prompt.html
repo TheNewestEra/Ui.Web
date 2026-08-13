@@ -3,8 +3,30 @@
 
   <section class="w-full flex flex-col gap-2">
     @if (loading()) {
-      <div class="flex min-h-96 items-center justify-center">
-        <span class="loading loading-spinner loading-lg"></span>
+      <div class="flex flex-col gap-5 py-1" aria-busy="true" aria-label="Loading game">
+        <div class="flex items-center justify-between">
+          <span class="skeleton h-5 w-32"></span>
+          <span class="skeleton h-10 w-24"></span>
+        </div>
+
+        <div class="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
+          <div class="skeleton aspect-square w-full rounded-box"></div>
+          <div class="flex flex-col gap-6">
+            <div class="rounded-box border border-base-300 bg-base-100 p-6">
+              <div class="skeleton h-7 w-3/4"></div>
+              <div class="skeleton mt-3 h-4 w-full"></div>
+              <div class="skeleton mt-2 h-4 w-2/3"></div>
+              <div class="skeleton mt-8 h-12 w-full"></div>
+              <div class="skeleton mt-4 h-10 w-full"></div>
+            </div>
+
+            <div class="rounded-box border border-base-300 bg-base-100 p-6">
+              <div class="skeleton h-6 w-36"></div>
+              <div class="skeleton mt-5 h-12 w-full"></div>
+              <div class="skeleton mt-3 h-12 w-full"></div>
+            </div>
+          </div>
+        </div>
       </div>
     } @else if (errorMessage()) {
       <app-error-alert>
@@ -12,12 +34,22 @@
       </app-error-alert>
     } @else if (game(); as game) {
       @if (game?.status === GameStatus.Generating || game.status === GameStatus.Queued) {
-        <div class="flex flex-col items-center gap-3 py-12 text-center">
-          <span class="loading loading-spinner loading-lg"></span>
+        <div class="flex flex-col gap-6 py-8" aria-busy="true">
+          <div class="text-center">
+            <h2 class="text-xl font-semibold">Generating images</h2>
+            <p class="mt-2 text-base-content/60">Almost ready...</p>
+          </div>
 
-          <h2 class="text-xl font-semibold">Generating images</h2>
-
-          <p class="text-base-content/60">Almost ready...</p>
+          <div class="mx-auto grid w-full max-w-4xl grid-cols-1 gap-6 lg:grid-cols-2">
+            <div class="skeleton aspect-square w-full rounded-box"></div>
+            <div class="rounded-box border border-base-300 bg-base-100 p-6">
+              <div class="skeleton h-7 w-3/4"></div>
+              <div class="skeleton mt-3 h-4 w-full"></div>
+              <div class="skeleton mt-2 h-4 w-2/3"></div>
+              <div class="skeleton mt-8 h-12 w-full"></div>
+              <div class="skeleton mt-4 h-10 w-full"></div>
+            </div>
+          </div>
         </div>
       }
 
@@ -189,16 +221,17 @@
 
             <div class="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
               <div
-                class="flex aspect-square w-full items-center justify-center overflow-hidden rounded-box bg-base-200"
+                class="relative flex aspect-square w-full items-center justify-center overflow-hidden rounded-box bg-base-200"
               >
                 @if (displayedRound()?.imageUrl; as imageUrl) {
+                  <div class="skeleton absolute inset-0 rounded-box"></div>
                   <img
                     [src]="imageUrl"
                     alt="Resolved round"
-                    class="block h-full w-full object-cover"
+                    class="relative block h-full w-full object-cover"
                   />
                 } @else {
-                  <span class="loading loading-spinner loading-lg"></span>
+                  <div class="skeleton absolute inset-0 rounded-box"></div>
                 }
               </div>
 
@@ -254,16 +287,17 @@
 
             <div class="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
               <div
-                class="flex aspect-square w-full items-center justify-center overflow-hidden rounded-box bg-base-200"
+                class="relative flex aspect-square w-full items-center justify-center overflow-hidden rounded-box bg-base-200"
               >
                 @if (displayedRound()?.imageUrl; as imageUrl) {
+                  <div class="skeleton absolute inset-0 rounded-box"></div>
                   <img
                     [src]="imageUrl"
                     alt="Guess the generated image"
-                    class="block h-full w-full object-cover"
+                    class="relative block h-full w-full object-cover"
                   />
                 } @else {
-                  <span class="loading loading-spinner loading-lg"></span>
+                  <div class="skeleton absolute inset-0 rounded-box"></div>
                 }
               </div>
 
@@ -340,8 +374,14 @@
               </div>
             </div>
           } @else {
-            <div class="flex min-h-48 items-center justify-center">
-              <span class="loading loading-spinner loading-lg"></span>
+            <div class="grid grid-cols-1 items-start gap-6 lg:grid-cols-2" aria-busy="true">
+              <div class="skeleton aspect-square w-full rounded-box"></div>
+              <div class="rounded-box border border-base-300 bg-base-100 p-6">
+                <div class="skeleton h-7 w-3/4"></div>
+                <div class="skeleton mt-3 h-4 w-full"></div>
+                <div class="skeleton mt-8 h-12 w-full"></div>
+                <div class="skeleton mt-4 h-10 w-full"></div>
+              </div>
             </div>
           }
         </div>
