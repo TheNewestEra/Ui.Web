@@ -127,11 +127,7 @@
             emptyMessage="No scores were recorded."
           />
 
-          <app-button
-            [loading]="replaying()"
-            [disabled]="replaying()"
-            (clicked)="replayGame()"
-          >
+          <app-button [loading]="replaying()" [disabled]="replaying()" (clicked)="replayGame()">
             Play Again
           </app-button>
         </div>
@@ -145,11 +141,7 @@
             <p class="mt-2 text-base-content/60">The game wasn't completed in time.</p>
           </div>
 
-          <app-button
-            [loading]="replaying()"
-            [disabled]="replaying()"
-            (clicked)="replayGame()"
-          >
+          <app-button [loading]="replaying()" [disabled]="replaying()" (clicked)="replayGame()">
             Play Again
           </app-button>
         </div>
@@ -178,40 +170,67 @@
             </div>
           }
           @if (game.postRoundIndex != null) {
-            <div class="flex flex-col items-center gap-6 text-center">
-              <div>
-                <p class="text-sm text-base-content/60">
-                  Round {{ game.postRoundIndex + 1 }} of {{ game.rounds.length }} complete
-                </p>
-                <h2 class="mt-2 text-2xl font-bold">The correct prompt was</h2>
-                <p class="mt-2 text-xl">{{ postRound()?.prompt ?? 'Waiting for the prompt…' }}</p>
-              </div>
+            <div class="flex items-center justify-between">
+              <p class="text-sm text-base-content/60">
+                Round {{ game.postRoundIndex + 1 }} of {{ game.rounds.length }} complete
+              </p>
 
-              <div class="rounded-box bg-base-200 px-6 py-4">
-                <p class="text-sm text-base-content/60">
+              <div class="rounded-box bg-base-200 px-4 py-2 text-right">
+                <p class="text-xs text-base-content/60">
                   {{
                     game.postRoundIndex + 1 < game.rounds.length
                       ? 'Next round starts in'
                       : 'Final results in'
                   }}
                 </p>
-                <p class="text-4xl font-bold tabular-nums">{{ formattedPostRoundTime() }}</p>
+                <p class="text-xl font-bold tabular-nums">{{ formattedPostRoundTime() }}</p>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
+              <div
+                class="flex aspect-square w-full items-center justify-center overflow-hidden rounded-box bg-base-200"
+              >
+                @if (displayedRound()?.imageUrl; as imageUrl) {
+                  <img
+                    [src]="imageUrl"
+                    alt="Resolved round"
+                    class="block h-full w-full object-cover"
+                  />
+                } @else {
+                  <span class="loading loading-spinner loading-lg"></span>
+                }
               </div>
 
-              @if (displayedRound()?.imageUrl; as imageUrl) {
-                <img
-                  [src]="imageUrl"
-                  alt="Resolved round"
-                  class="aspect-square w-full max-w-md rounded-box object-cover"
-                />
-              }
+              <div class="flex min-w-0 flex-col gap-6">
+                <app-card class="w-full">
+                  <div card-title>Round complete</div>
+                  <div card-subtitle>The correct prompt was</div>
 
-              <app-leaderboard
-                class="w-full max-w-2xl text-left"
-                [entries]="leaderboardEntries()"
-                [currentId]="participantId()"
-                subtitle="Scores after this round"
-              />
+                  <div card-content class="flex flex-col gap-5">
+                    <p class="text-xl font-semibold leading-relaxed">
+                      {{ postRound()?.prompt ?? 'Waiting for the prompt…' }}
+                    </p>
+
+                    <div class="rounded-box bg-base-200 px-5 py-4">
+                      <p class="text-sm text-base-content/60">
+                        {{
+                          game.postRoundIndex + 1 < game.rounds.length
+                            ? 'Get ready for the next round.'
+                            : 'Final results are being prepared.'
+                        }}
+                      </p>
+                    </div>
+                  </div>
+                </app-card>
+
+                <app-leaderboard
+                  class="w-full"
+                  [entries]="leaderboardEntries()"
+                  [currentId]="participantId()"
+                  subtitle="Scores after this round"
+                />
+              </div>
             </div>
           } @else if (game.currentRound != null) {
             <div class="flex items-center justify-between">
@@ -220,7 +239,7 @@
               </p>
 
               <div
-                class="rounded-box bg-base-200 text-xl font-bold tabular-nums"
+                class="rounded-box bg-base-200 px-4 py-2 text-xl font-bold tabular-nums"
                 [class.text-error]="roundRemainingMs() <= 5000"
               >
                 {{ formattedRoundTime() }}
@@ -248,74 +267,77 @@
                 }
               </div>
 
-              @if (!isSpectator()) {
-                <app-card class="w-full">
-                  <div card-title>What prompt generated this image?</div>
+              <div class="flex min-w-0 flex-col gap-6">
+                @if (!isSpectator()) {
+                  <app-card class="w-full">
+                    <div card-title>What prompt generated this image?</div>
 
-                  <div card-subtitle>
-                    Type your best guess and submit it before the timer runs out.
-                  </div>
+                    <div card-subtitle>
+                      Type your best guess and submit it before the timer runs out.
+                    </div>
 
-                  <div class="flex flex-col gap-4" card-content>
-                    <form
-                      [formGroup]="guessForm"
-                      (ngSubmit)="submitGuess()"
-                      class="flex flex-col gap-4"
-                    >
-                      <app-form-field label="Guess" [control]="guessForm.controls.guess">
-                        <app-input
-                          formControlName="guess"
-                          [readonly]="!canSubmitGuess()"
-                          placeholder="What do you think the image represents?"
-                        />
-                      </app-form-field>
-
-                      <app-button
-                        type="submit"
-                        [loading]="submitting()"
-                        [disabled]="!canSubmitGuess() || guessForm.invalid"
+                    <div class="flex flex-col gap-4" card-content>
+                      <form
+                        [formGroup]="guessForm"
+                        (ngSubmit)="submitGuess()"
+                        class="flex flex-col gap-4"
                       >
-                        Submit Guess
-                      </app-button>
-                    </form>
+                        <app-form-field label="Guess" [control]="guessForm.controls.guess">
+                          <app-input
+                            formControlName="guess"
+                            [readonly]="!canSubmitGuess()"
+                            placeholder="What do you think the image represents?"
+                          />
+                        </app-form-field>
 
-                    @if (answeredCorrectly()) {
-                      <div class="rounded-box bg-success/10 p-4 text-success">
-                        <div class="flex items-center gap-3">
-                          <app-icon name="circle-check" class="size-5" />
+                        <app-button
+                          type="submit"
+                          [loading]="submitting()"
+                          [disabled]="!canSubmitGuess() || guessForm.invalid"
+                        >
+                          Submit Guess
+                        </app-button>
+                      </form>
 
-                          <div>
-                            <p class="font-semibold">Correct!</p>
-                            <p class="text-sm">
-                              You earned {{ guessResult()?.score ?? 0 }} points this round. Your
-                              total score is
-                              {{ guessResult()?.totalScore ?? currentPlayerScore() }}.
-                            </p>
-                            <p class="mt-1 text-sm">Waiting for the other players to finish.</p>
+                      @if (answeredCorrectly()) {
+                        <div class="rounded-box bg-success/10 p-4 text-success">
+                          <div class="flex items-center gap-3">
+                            <app-icon name="circle-check" class="size-5" />
+
+                            <div>
+                              <p class="font-semibold">Correct!</p>
+                              <p class="text-sm">
+                                You earned {{ guessResult()?.score ?? 0 }} points this round. Your
+                                total score is
+                                {{ guessResult()?.totalScore ?? currentPlayerScore() }}.
+                              </p>
+                              <p class="mt-1 text-sm">Waiting for the other players to finish.</p>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    } @else if (guessResult(); as result) {
-                      <div class="rounded-box bg-error/10 p-4 text-error">
-                        <div class="flex items-center gap-3">
-                          <app-icon name="circle-x" class="size-5" />
+                      } @else if (guessResult(); as result) {
+                        <div class="rounded-box bg-error/10 p-4 text-error">
+                          <div class="flex items-center gap-3">
+                            <app-icon name="circle-x" class="size-5" />
 
-                          <div>
-                            <p class="font-semibold">Not quite.</p>
-                            <p class="text-sm">Keep trying before the timer runs out.</p>
+                            <div>
+                              <p class="font-semibold">Not quite.</p>
+                              <p class="text-sm">Keep trying before the timer runs out.</p>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    }
-                  </div>
-                </app-card>
-              } @else {
-                <app-leaderboard
-                  class="w-full"
-                  [entries]="leaderboardEntries()"
-                  subtitle="Live scores for this game"
-                />
-              }
+                      }
+                    </div>
+                  </app-card>
+                } @else {
+                  <app-leaderboard
+                    class="w-full"
+                    [entries]="leaderboardEntries()"
+                    [currentId]="participantId()"
+                    subtitle="Live scores for this game"
+                  />
+                }
+              </div>
             </div>
           } @else {
             <div class="flex min-h-48 items-center justify-center">
