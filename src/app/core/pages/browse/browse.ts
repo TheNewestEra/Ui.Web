@@ -8,6 +8,7 @@ import {
   BrowseService,
   CatalogEntry,
   CatalogSort,
+  PlayStatus,
 } from '@thenewestera/browse-ng';
 import { PageLayoutComponent } from '@layout/page-layout/page-layout';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header';
@@ -17,8 +18,6 @@ import { IconComponent } from '@shared/ui/icon/icon';
 import { FormFieldComponent } from '@shared/components/form/form-field/form-field';
 import { SelectComponent, SelectOption } from '@shared/components/form/select/select';
 import { ErrorAlertComponent } from '@shared/components/alert/error/error';
-
-const PAGE_SIZE = 12;
 
 @Component({
   selector: 'app-browse',
@@ -53,9 +52,25 @@ export class BrowsePage {
     { label: 'Top rated', value: 'rating' },
   ];
 
+  readonly statusOptions: SelectOption[] = [
+    { label: 'All statuses', value: 'all' },
+    { label: 'Open to join', value: PlayStatus.Joinable },
+    { label: 'In progress', value: PlayStatus.Active },
+    { label: 'Finished', value: PlayStatus.Finished },
+  ];
+
+  readonly pageSizeOptions: SelectOption[] = [
+    { label: '12 per page', value: '12' },
+    { label: '24 per page', value: '24' },
+    { label: '48 per page', value: '48' },
+    { label: '60 per page', value: '60' },
+  ];
+
   readonly filterForm = this.fb.nonNullable.group({
     kind: ['all'],
     sort: [CatalogSort.Recent],
+    playStatus: ['all'],
+    limit: ['12'],
   });
 
   readonly loading = signal(false);
@@ -64,9 +79,11 @@ export class BrowsePage {
   readonly offset = signal(0);
   readonly loadedImageIds = signal<ReadonlySet<string>>(new Set());
 
-  readonly page = computed(() => this.offset() / PAGE_SIZE + 1);
+  readonly page = computed(() => this.offset() / Number(this.filterForm.controls.limit.value) + 1);
   readonly hasPreviousPage = computed(() => this.offset() > 0);
-  readonly hasNextPage = computed(() => this.entries().length === PAGE_SIZE);
+  readonly hasNextPage = computed(
+    () => this.entries().length === Number(this.filterForm.controls.limit.value),
+  );
 
   constructor() {
     this.filterForm.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
@@ -80,7 +97,7 @@ export class BrowsePage {
   load(): void {
     if (this.loading()) return;
 
-    const { kind, sort } = this.filterForm.getRawValue();
+    const { kind, sort, playStatus, limit } = this.filterForm.getRawValue();
 
     this.loading.set(true);
     this.errorMessage.set(null);
@@ -90,8 +107,8 @@ export class BrowsePage {
       .apiCatalogGet(
         kind === 'all' ? undefined : (kind as 'guess' | 'puzzle'),
         sort as CatalogSort,
-        undefined,
-        PAGE_SIZE,
+        playStatus === 'all' ? undefined : (playStatus as PlayStatus),
+        Number(limit),
         this.offset(),
       )
       .pipe(
@@ -113,14 +130,16 @@ export class BrowsePage {
   previousPage(): void {
     if (!this.hasPreviousPage() || this.loading()) return;
 
-    this.offset.update((offset) => Math.max(0, offset - PAGE_SIZE));
+    this.offset.update((offset) =>
+      Math.max(0, offset - Number(this.filterForm.controls.limit.value)),
+    );
     this.load();
   }
 
   nextPage(): void {
     if (!this.hasNextPage() || this.loading()) return;
 
-    this.offset.update((offset) => offset + PAGE_SIZE);
+    this.offset.update((offset) => offset + Number(this.filterForm.controls.limit.value));
     this.load();
   }
 
