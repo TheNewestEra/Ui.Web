@@ -2,19 +2,15 @@ import { Component, input } from '@angular/core';
 import {
   ArrowRight,
   Check,
-  ChevronLeft,
-  ChevronRight,
   CircleAlert,
   CircleCheck,
   CircleUser,
   CircleX,
-  Clock,
   Copy,
   Gamepad2,
   ImageOff,
   Inbox,
   Info,
-  Layers3,
   LayoutDashboard,
   LayoutGrid,
   LucideAngularModule,
@@ -23,7 +19,6 @@ import {
   Puzzle,
   RefreshCw,
   Share2,
-  Sparkle,
   Sun,
   Timer,
   Trees,
@@ -33,8 +28,6 @@ import {
 } from 'lucide-angular';
 
 const usedIcons = {
-  ChevronLeft,
-  ChevronRight,
   CircleAlert,
   CircleUser,
   Gamepad2,
@@ -54,13 +47,10 @@ const usedIcons = {
   Users,
   Timer,
   CircleCheck,
-  Clock,
   Copy,
   ArrowRight,
   Check,
-  Sparkle,
   CircleX,
-  Layers3,
   Share2,
 };
 
