@@ -5,6 +5,7 @@ import { GamesPage } from '@core/pages/games/games';
 import { GuessPromptGamePage } from '@core/pages/games/guess-prompt/guess-prompt';
 import { PiecePuzzleGamePage } from '@core/pages/games/piece-puzzle/piece-puzzle';
 import { LeaderboardPage } from '@core/pages/leaderboard/leaderboard';
+import { FriendsPage } from '@core/pages/friends/friends';
 
 export const routes: Routes = [
   {
@@ -38,6 +39,10 @@ export const routes: Routes = [
       {
         path: 'dashboard',
         component: DashboardPage,
+      },
+      {
+        path: 'friends',
+        component: FriendsPage,
       },
       {
         path: 'account',

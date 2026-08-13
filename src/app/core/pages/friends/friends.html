@@ -1,0 +1,275 @@
+<app-page-layout>
+  <app-page-header
+    title="Friends"
+    subtitle="Manage friends and groups, then invite them to play Guess the Prompt or Piece Puzzle."
+  />
+
+  <section class="flex flex-col gap-6">
+    @if (errorMessage()) {
+      <app-error-alert>{{ errorMessage() }}</app-error-alert>
+    }
+
+    @if (successMessage()) {
+      <div class="rounded-box border border-success/30 bg-success/10 p-4 text-success">
+        <div class="flex items-center gap-3">
+          <app-icon name="circle-check" class="size-5" />
+          <span>{{ successMessage() }}</span>
+        </div>
+      </div>
+    }
+
+    @if (loading()) {
+      <div class="flex min-h-64 items-center justify-center">
+        <span class="loading loading-spinner loading-lg"></span>
+      </div>
+    } @else {
+      <div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
+        <div class="flex min-w-0 flex-col gap-6">
+          <app-card>
+            <div card-title>Your friends</div>
+            <div card-subtitle>People you can add to groups and invite directly to games.</div>
+
+            <div card-content class="flex flex-col gap-3">
+              @for (friend of friends(); track friend.id) {
+                <app-friend-person-row [name]="friend.username" [color]="friend.color">
+                  <app-button
+                    size="sm"
+                    variant="error"
+                    [loading]="isActionLoading('remove-friend-' + friend.id)"
+                    (clicked)="removeFriend(friend.id)"
+                  >
+                    Remove
+                  </app-button>
+                </app-friend-person-row>
+              } @empty {
+                <div class="rounded-box bg-base-200 p-8 text-center text-base-content/60">
+                  <app-icon name="users" class="mx-auto mb-3 size-8" />
+                  <p>No friends yet. Send someone a request to get started.</p>
+                </div>
+              }
+            </div>
+          </app-card>
+
+          <app-card>
+            <div card-title>Friend requests</div>
+
+            <div card-content class="grid gap-6 lg:grid-cols-2">
+              <div class="flex flex-col gap-3">
+                <h3 class="font-semibold">Incoming</h3>
+
+                @for (request of incomingRequests(); track request.id) {
+                  <app-friend-person-row
+                    [name]="request.username"
+                    [color]="request.color"
+                    [subtitle]="'Sent ' + (request.created_at | date: 'mediumDate')"
+                  >
+                    <app-button
+                      size="sm"
+                      [loading]="isActionLoading('accept-' + request.id)"
+                      (clicked)="acceptRequest(request.id)"
+                    >
+                      Accept
+                    </app-button>
+                    <app-button
+                      size="sm"
+                      variant="ghost"
+                      [loading]="isActionLoading('decline-' + request.id)"
+                      (clicked)="declineRequest(request.id)"
+                    >
+                      Decline
+                    </app-button>
+                  </app-friend-person-row>
+                } @empty {
+                  <p class="rounded-box bg-base-200 p-5 text-center text-base-content/60">
+                    No incoming requests.
+                  </p>
+                }
+              </div>
+
+              <div class="flex flex-col gap-3">
+                <h3 class="font-semibold">Sent</h3>
+
+                @for (request of outgoingRequests(); track request.id) {
+                  <app-friend-person-row
+                    [name]="request.username"
+                    [color]="request.color"
+                    subtitle="Waiting for a response"
+                  >
+                    <app-button
+                      size="sm"
+                      variant="ghost"
+                      [loading]="isActionLoading('cancel-' + request.id)"
+                      (clicked)="cancelRequest(request.id)"
+                    >
+                      Cancel
+                    </app-button>
+                  </app-friend-person-row>
+                } @empty {
+                  <p class="rounded-box bg-base-200 p-5 text-center text-base-content/60">
+                    No sent requests.
+                  </p>
+                }
+              </div>
+            </div>
+          </app-card>
+
+          <app-card>
+            <div card-title>Groups</div>
+            <div card-subtitle>Create groups to invite several friends at once.</div>
+
+            <div card-content class="grid gap-4 lg:grid-cols-2">
+              @for (group of groups(); track group.id) {
+                <div class="flex flex-col gap-4 rounded-box border border-base-300 bg-base-100 p-5">
+                  <div class="flex items-start justify-between gap-3">
+                    <div>
+                      <h3 class="text-lg font-bold">{{ group.name }}</h3>
+                      <p class="text-sm text-base-content/60">
+                        {{ group.members.length }} member(s)
+                      </p>
+                    </div>
+
+                    <app-button
+                      size="sm"
+                      variant="ghost"
+                      [loading]="isActionLoading('delete-group-' + group.id)"
+                      (clicked)="deleteGroup(group.id)"
+                    >
+                      Delete
+                    </app-button>
+                  </div>
+
+                  <div class="flex flex-col gap-2">
+                    @for (member of group.members; track member.id) {
+                      <div
+                        class="flex items-center justify-between gap-3 rounded-box bg-base-200 p-3"
+                      >
+                        <div class="flex min-w-0 items-center gap-2">
+                          <span
+                            class="size-3 shrink-0 rounded-full ring-2 ring-base-300"
+                            [style.background-color]="member.color"
+                          ></span>
+                          <span class="truncate font-medium">{{ member.username }}</span>
+                        </div>
+                        <app-button
+                          size="sm"
+                          variant="ghost"
+                          [loading]="isActionLoading('remove-' + group.id + '-' + member.id)"
+                          (clicked)="removeGroupMember(group.id, member.id)"
+                        >
+                          Remove
+                        </app-button>
+                      </div>
+                    } @empty {
+                      <p class="py-3 text-center text-sm text-base-content/60">No members yet.</p>
+                    }
+                  </div>
+
+                  @if (availableFriends(group).length) {
+                    <label class="form-control w-full">
+                      <span class="mb-2 text-sm font-medium">Add a friend</span>
+                      <select
+                        class="select w-full"
+                        #friendSelect
+                        (change)="
+                          addGroupMember(group.id, friendSelect.value); friendSelect.value = ''
+                        "
+                      >
+                        <option value="">Choose a friend</option>
+                        @for (friend of availableFriends(group); track friend.id) {
+                          <option [value]="friend.id">{{ friend.username }}</option>
+                        }
+                      </select>
+                    </label>
+                  }
+                </div>
+              } @empty {
+                <div
+                  class="rounded-box bg-base-200 p-8 text-center text-base-content/60 lg:col-span-2"
+                >
+                  <p>No groups yet. Create one from the panel on the right.</p>
+                </div>
+              }
+            </div>
+          </app-card>
+
+          <app-card>
+            <div card-title>Game invites</div>
+            <div card-subtitle>Invitations waiting for you.</div>
+
+            <div card-content class="flex flex-col gap-3">
+              @for (invite of invites(); track invite.id) {
+                <app-friend-person-row
+                  [name]="invite.inviterUsername"
+                  [color]="invite.inviterColor"
+                  [subtitle]="
+                    'Invited you to ' +
+                    (invite.kind === 'guess' ? 'Guess the Prompt' : 'Piece Puzzle')
+                  "
+                >
+                  <app-button
+                    size="sm"
+                    [loading]="isActionLoading('accept-invite-' + invite.id)"
+                    (clicked)="acceptInvite(invite.id)"
+                  >
+                    Join
+                  </app-button>
+                  <app-button
+                    size="sm"
+                    variant="ghost"
+                    [loading]="isActionLoading('decline-invite-' + invite.id)"
+                    (clicked)="declineInvite(invite.id)"
+                  >
+                    Decline
+                  </app-button>
+                </app-friend-person-row>
+              } @empty {
+                <p class="rounded-box bg-base-200 p-6 text-center text-base-content/60">
+                  No game invites waiting.
+                </p>
+              }
+            </div>
+          </app-card>
+        </div>
+
+        <aside class="flex flex-col gap-6 xl:sticky xl:top-6 xl:self-start">
+          <app-card>
+            <div card-title>Add a friend</div>
+            <div card-subtitle>Send a request using their exact username.</div>
+
+            <form
+              card-content
+              [formGroup]="friendRequestForm"
+              (ngSubmit)="sendFriendRequest()"
+              class="flex flex-col gap-4"
+            >
+              <app-form-field label="Username" [control]="friendRequestForm.controls.username">
+                <app-input formControlName="username" placeholder="Player username" />
+              </app-form-field>
+              <app-button type="submit" [loading]="isActionLoading('friend-request')">
+                Send request
+              </app-button>
+            </form>
+          </app-card>
+
+          <app-card>
+            <div card-title>Create a group</div>
+
+            <form
+              card-content
+              [formGroup]="groupForm"
+              (ngSubmit)="createGroup()"
+              class="flex flex-col gap-4"
+            >
+              <app-form-field label="Group name" [control]="groupForm.controls.name">
+                <app-input formControlName="name" placeholder="Weekend players" />
+              </app-form-field>
+              <app-button type="submit" [loading]="isActionLoading('create-group')">
+                Create group
+              </app-button>
+            </form>
+          </app-card>
+        </aside>
+      </div>
+    }
+  </section>
+</app-page-layout>

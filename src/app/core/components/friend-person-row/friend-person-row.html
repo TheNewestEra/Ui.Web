@@ -1,0 +1,21 @@
+<div
+  class="flex flex-col gap-3 rounded-box border border-base-300 bg-base-100 p-4 sm:flex-row sm:items-center sm:justify-between"
+>
+  <div class="flex min-w-0 items-center gap-3">
+    <span
+      class="size-10 shrink-0 rounded-full ring-2 ring-base-300"
+      [style.background-color]="color()"
+    ></span>
+
+    <div class="min-w-0">
+      <p class="truncate font-semibold">{{ name() }}</p>
+      @if (subtitle()) {
+        <p class="truncate text-sm text-base-content/60">{{ subtitle() }}</p>
+      }
+    </div>
+  </div>
+
+  <div class="flex flex-wrap gap-2 sm:justify-end">
+    <ng-content />
+  </div>
+</div>

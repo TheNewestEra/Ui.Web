@@ -30,6 +30,14 @@ import { ErrorAlertComponent } from '@shared/components/alert/error/error';
 import { FormFieldComponent } from '@shared/components/form/form-field/form-field';
 import { GuessPromptGameService } from '@core/services/guess-prompt-game.service';
 import {
+  ApiInvitesPostRequestKindEnum,
+  FriendSummary,
+  FriendsService,
+  GroupSummary,
+  InvitesService,
+} from '@thenewestera/friends-ng';
+import { UserStateService } from '@core/services/user-state.service';
+import {
   LeaderboardComponent,
   LeaderboardDisplayEntry,
 } from '@core/components/leaderboard/leaderboard';
@@ -57,6 +65,9 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
   private readonly guessPromptService = inject(GuessThePromptService);
   private readonly guessPromptSocket = inject(GuessPromptSocketService);
   private readonly guessPromptGameService = inject(GuessPromptGameService);
+  private readonly friendsService = inject(FriendsService);
+  private readonly invitesService = inject(InvitesService);
+  readonly userState = inject(UserStateService);
 
   readonly GameStatus = GameStatus;
 
@@ -72,6 +83,13 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
   readonly replaying = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly shareMessage = signal<string | null>(null);
+  readonly inviteMessage = signal<string | null>(null);
+  readonly inviteLoading = signal(false);
+  readonly inviteRecipientsLoading = signal(false);
+  readonly inviteFriends = signal<FriendSummary[]>([]);
+  readonly inviteGroups = signal<GroupSummary[]>([]);
+  readonly inviteTarget = new FormControl('', { nonNullable: true });
+  private inviteRecipientsLoaded = false;
 
   readonly joinedGameId = signal(sessionStorage.getItem(LOCAL_STORAGE_KEYS.GUESS_GAME_ID));
   readonly participantId = signal(sessionStorage.getItem(LOCAL_STORAGE_KEYS.GUESS_PARTICIPANT_ID));
@@ -317,6 +335,8 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
     this.game.set(game);
     this.loading.set(false);
     this.errorMessage.set(null);
+
+    if (game.status === GameStatus.Waiting) this.loadInviteRecipients();
 
     if (previousRound !== nextRound && nextRound != null) this.handleRoundChanged(nextRound);
 
@@ -665,6 +685,39 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
     }
   }
 
+  sendGameInvite(): void {
+    const gameId = this.gameId();
+    const target = this.inviteTarget.value;
+
+    if (!gameId || this.game()?.status !== GameStatus.Waiting || !target) return;
+
+    const [targetType, targetId] = target.split(':', 2);
+
+    if (!targetId) return;
+
+    this.inviteLoading.set(true);
+    this.inviteMessage.set(null);
+
+    this.invitesService
+      .apiInvitesPost({
+        kind: ApiInvitesPostRequestKindEnum.Guess,
+        sessionId: gameId,
+        ...(targetType === 'friend' ? { friendId: targetId } : { groupId: targetId }),
+      })
+      .pipe(finalize(() => this.inviteLoading.set(false)))
+      .subscribe({
+        next: (response) => {
+          this.inviteTarget.reset();
+          this.inviteMessage.set(
+            response.invited === 1 ? 'Invitation sent.' : `${response.invited} invitations sent.`,
+          );
+        },
+        error: (error) => {
+          this.inviteMessage.set(error?.error?.error ?? 'Unable to send the invitation.');
+        },
+      });
+  }
+
   replayGame(): void {
     const gameId = this.gameId();
 
@@ -871,6 +924,11 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
     this.roundRemainingMs.set(0);
     this.postRoundRemainingMs.set(0);
     this.shareMessage.set(null);
+    this.inviteMessage.set(null);
+    this.inviteTarget.reset();
+    this.inviteFriends.set([]);
+    this.inviteGroups.set([]);
+    this.inviteRecipientsLoaded = false;
 
     this.game.set(null);
   }
@@ -884,6 +942,27 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
         ? sessionStorage.getItem(LOCAL_STORAGE_KEYS.GUESS_PARTICIPANT_ID)
         : null,
     );
+  }
+
+  private loadInviteRecipients(): void {
+    if (!this.userState.isLoggedIn() || this.inviteRecipientsLoaded) return;
+
+    this.inviteRecipientsLoaded = true;
+    this.inviteRecipientsLoading.set(true);
+
+    this.friendsService
+      .apiFriendsGet()
+      .pipe(finalize(() => this.inviteRecipientsLoading.set(false)))
+      .subscribe({
+        next: (response) => {
+          this.inviteFriends.set(response.friends);
+          this.inviteGroups.set(response.groups);
+        },
+        error: () => {
+          this.inviteRecipientsLoaded = false;
+          this.inviteMessage.set('Unable to load friends and groups.');
+        },
+      });
   }
 
   private rememberAnsweredRound(gameId: string, roundIndex: number): void {
