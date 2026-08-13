@@ -1,6 +1,7 @@
 import { Component, input } from '@angular/core';
 import {
   ArrowRight,
+  Bell,
   Check,
   CircleAlert,
   CircleCheck,
@@ -28,6 +29,7 @@ import {
 } from 'lucide-angular';
 
 const usedIcons = {
+  Bell,
   CircleAlert,
   CircleUser,
   Gamepad2,

@@ -5,9 +5,11 @@ export const BASE_URL = {
   PUZZLE: 'https://api.puzzle.ryanb.co.za',
   BROWSE: 'https://api.browse.ryanb.co.za',
   FRIENDS: 'https://api.friends.ryanb.co.za',
+  NOTIFICATIONS: 'https://api.notifications.ryanb.co.za',
 };
 
 export const WS_BASE_URL = {
   PUZZLE: 'wss://api.puzzle.ryanb.co.za',
   GUESS: 'wss://api.guess.ryanb.co.za',
+  NOTIFICATIONS: 'wss://api.notifications.ryanb.co.za',
 };
