@@ -106,6 +106,10 @@
                   <p class="text-sm text-base-content/60">Join before the timer ends to play.</p>
                 }
 
+                @if (joinErrorMessage()) {
+                  <p class="mt-2 text-sm text-error">{{ joinErrorMessage() }}</p>
+                }
+
                 @if (shareMessage()) {
                   <p class="mt-1 text-sm text-base-content/60">{{ shareMessage() }}</p>
                 }
@@ -221,7 +225,9 @@
                       [style.background-color]="participant.color"
                     ></span>
                     <span class="font-medium">{{ participant.name }}</span>
-                    @if (participant.id === participantId()) {
+                    @if (
+                      participant.id === participantId() || participant.name === joinedPlayerName()
+                    ) {
                       <span class="badge badge-primary badge-sm ml-auto">You</span>
                     }
                   </div>
@@ -339,7 +345,9 @@
                       [style.background-color]="participant.color"
                     ></span>
                     <span class="font-medium">{{ participant.name }}</span>
-                    @if (participant.id === participantId()) {
+                    @if (
+                      participant.id === participantId() || participant.name === joinedPlayerName()
+                    ) {
                       <span class="badge badge-primary badge-sm ml-auto">You</span>
                     }
                     @if (lastMoves().get(participant.name); as move) {

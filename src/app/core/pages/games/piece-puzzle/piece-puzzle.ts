@@ -27,6 +27,8 @@ import {
   PuzzleWsTimeoutMessageTypeEnum,
   WsPresenceMessage,
   WsPresenceMessageTypeEnum,
+  WsPlayerJoinedMessage,
+  WsPlayerJoinedMessageTypeEnum,
   WsStatusMessage,
   WsStatusMessageTypeEnum,
 } from '@thenewestera/puzzle-ng';
@@ -93,6 +95,7 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
   readonly starting = signal(false);
   readonly replaying = signal(false);
   readonly errorMessage = signal<string | null>(null);
+  readonly joinErrorMessage = signal<string | null>(null);
   readonly shareMessage = signal<string | null>(null);
   readonly inviteMessage = signal<string | null>(null);
   readonly inviteLoading = signal(false);
@@ -105,6 +108,7 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
 
   readonly selectedTile = signal<number | null>(null);
   readonly participantId = signal<string | null>(null);
+  readonly joinedPlayerName = signal<string | null>(null);
   readonly moving = signal(false);
   readonly solved = signal(false);
 
@@ -142,7 +146,13 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
 
   readonly hasJoined = computed(() => {
     const participantId = this.participantId();
-    return !!participantId && !!this.game()?.participants.some(({ id }) => id === participantId);
+
+    if (this.joinedPlayerName()) return true;
+
+    return (
+      !!participantId &&
+      !!this.game()?.participants.some((participant) => participant.id === participantId)
+    );
   });
 
   readonly isSpectator = computed(
@@ -160,8 +170,7 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
   readonly leaderboardEntries = computed<LeaderboardDisplayEntry[]>(() => {
     const game = this.game();
 
-    // TODO(BE): Return participant ids and per-player scores so the puzzle can show complete
-    // standings. The current contract only identifies the solver and the puzzle's final score.
+    // TODO: BE to give scores to each player, not just the player who solved it
     if (!game?.solvedBy || game.score == null) return [];
 
     const solver = game.participants.find((participant) => participant.name === game.solvedBy);
@@ -178,7 +187,10 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
   });
 
   readonly currentParticipant = computed(() => {
-    return this.game()?.participants.find((participant) => participant.id === this.participantId());
+    return this.game()?.participants.find(
+      (participant) =>
+        participant.id === this.participantId() || participant.name === this.joinedPlayerName(),
+    );
   });
 
   readonly participantColor = computed(() => this.currentParticipant()?.color ?? null);
@@ -226,6 +238,7 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
     this.loading.set(true);
     this.imageLoading.set(true);
     this.errorMessage.set(null);
+    this.joinErrorMessage.set(null);
     this.shareMessage.set(null);
     this.inviteMessage.set(null);
     this.inviteTarget.reset();
@@ -233,6 +246,7 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
     this.inviteGroups.set([]);
     this.inviteRecipientsLoaded = false;
     this.selectedTile.set(null);
+    this.joinedPlayerName.set(null);
     this.tileSelections.set(new Map());
     this.lastMoves.set(new Map());
     this.pendingMove = null;
@@ -296,12 +310,12 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
       this.game()?.status !== PuzzleStatus.Waiting ||
       this.hasJoined() ||
       this.joining()
-    ) {
+    )
       return;
-    }
 
     this.joining.set(true);
     this.errorMessage.set(null);
+    this.joinErrorMessage.set(null);
 
     const player = this.userState.isLoggedIn() ? undefined : this.userState.displayName();
     const color = this.userState.isLoggedIn() ? undefined : (this.userState.color() ?? undefined);
@@ -465,6 +479,10 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
         this.handlePresence(message);
         break;
 
+      case WsPlayerJoinedMessageTypeEnum.PlayerJoined:
+        this.handlePlayerJoined(message);
+        break;
+
       case PuzzleWsTileSelectedMessageTypeEnum.TileSelected:
         this.handleTileSelected(message);
         break;
@@ -622,7 +640,29 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
       message.token ?? '',
     );
     this.participantId.set(message.participantId);
+    this.joinedPlayerName.set(this.userState.displayName());
     this.joining.set(false);
+    this.joinErrorMessage.set(null);
+
+    this.game.update((game) => {
+      if (!game) return game;
+
+      const playerName = this.userState.displayName();
+      const participantIndex = game.participants.findIndex(
+        ({ id, name }) => id === message.participantId || name === playerName,
+      );
+
+      if (participantIndex === -1) return game;
+
+      const participants = [...game.participants];
+      participants[participantIndex] = {
+        ...participants[participantIndex],
+        id: message.participantId,
+        color: message.color,
+      };
+
+      return { ...game, participants };
+    });
   }
 
   /** Direct reply to a rejected `join`/`move`/`select` message — the WS
@@ -630,6 +670,13 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
    * There's no per-call `.subscribe({error})` to catch this on any more, so
    * it's handled centrally here instead. */
   private handleError(message: PuzzleWsErrorMessage): void {
+    if (message.action === PuzzleWsErrorMessageActionEnum.Join) {
+      this.joining.set(false);
+      this.joinedPlayerName.set(null);
+      this.joinErrorMessage.set(message.error || 'Unable to join the puzzle.');
+      return;
+    }
+
     this.errorMessage.set(message.error || 'Unable to update the puzzle.');
 
     if (message.action === PuzzleWsErrorMessageActionEnum.Move) {
@@ -637,7 +684,6 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
       this.moving.set(false);
     }
 
-    if (message.action === PuzzleWsErrorMessageActionEnum.Join) this.joining.set(false);
   }
 
   private handleTileSelected(message: PuzzleWsTileSelectedMessage): void {
@@ -687,6 +733,33 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
         connectedPlayers: message.connectedPlayers,
       };
     });
+  }
+
+  private handlePlayerJoined(message: WsPlayerJoinedMessage): void {
+    this.game.update((game) => {
+      if (!game) return game;
+
+      const existingParticipant = game.participants.find(
+        (participant) =>
+          (!!message.participantId && participant.id === message.participantId) ||
+          participant.name === message.name,
+      );
+
+      if (existingParticipant) return game;
+
+      return {
+        ...game,
+        participants: [
+          ...game.participants,
+          {
+            id: message.participantId ?? `player:${message.name}`,
+            name: message.name,
+            color: message.color,
+          },
+        ],
+      };
+    });
+
   }
 
   private handleStatus(message: WsStatusMessage): void {
