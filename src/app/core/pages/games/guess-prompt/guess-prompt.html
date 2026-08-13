@@ -130,7 +130,7 @@
                   Share game
                 </app-button>
 
-                @if (userState.isLoggedIn()) {
+                @if (isLoggedIn()) {
                   <select
                     class="select min-w-48"
                     [formControl]="inviteTarget"

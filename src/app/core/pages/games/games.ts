@@ -11,6 +11,7 @@ import {
   JoinResult as PuzzleJoinResult,
   PiecePuzzleService,
   PuzzlesPost202Response,
+  PuzzlesPostRequest,
 } from '@thenewestera/puzzle-ng';
 import { SelectComponent, SelectOption } from '@shared/components/form/select/select';
 import { Router } from '@angular/router';
@@ -113,11 +114,24 @@ export class GamesPage {
 
     const { theme, gridSize } = this.piecePuzzleForm.getRawValue();
 
+    if (this.userStateService.user() !== null) return undefined;
+
+    const request: PuzzlesPostRequest = {
+      theme,
+      gridSize: Number(gridSize),
+      player:
+        this.userStateService.user() !== null ? undefined : this.userStateService.displayName(),
+      color:
+        this.userStateService.user() !== null
+          ? undefined
+          : (this.userStateService.color() ?? undefined),
+    };
+
     this.piecePuzzleLoading.set(true);
     this.piecePuzzleErrorMessage.set(null);
 
     this.piecePuzzleService
-      .puzzlesPost({ theme, gridSize: Number(gridSize) })
+      .puzzlesPost(request)
       .pipe(
         finalize(() => {
           this.piecePuzzleLoading.set(false);
@@ -125,9 +139,21 @@ export class GamesPage {
       )
       .subscribe({
         next: (response: PuzzlesPost202Response) => {
-          sessionStorage.setItem(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_HOST_TOKEN, response.hostToken);
+          // Storing game details
+          sessionStorage.setItem(
+            `${LOCAL_STORAGE_KEYS.PIECE_PUZZLE_HOST_TOKEN}:${response.puzzleId}`,
+            response.hostToken,
+          );
 
-          // this.joinPuzzle(response.puzzleId);
+          // storing participant details
+          sessionStorage.setItem(
+            `${LOCAL_STORAGE_KEYS.PIECE_PUZZLE_PARTICIPANT_ID}:${response.puzzleId}`,
+            response.participantId,
+          );
+          sessionStorage.setItem(
+            `${LOCAL_STORAGE_KEYS.PIECE_PUZZLE_TOKEN}:${response.puzzleId}`,
+            response.token ?? '',
+          );
 
           this.router.navigate(['/games/piece-puzzle', response.puzzleId]);
         },
@@ -138,29 +164,5 @@ export class GamesPage {
           );
         },
       });
-  }
-
-  private joinPuzzle(puzzleId: string): void {
-    var player = undefined;
-    if (this.userStateService.user() === null) {
-      player = {
-        player: this.userStateService.displayName(),
-        //colour: this.userStateService.color(),  // TODO: waiting for BE to update
-      };
-    }
-
-    // this.piecePuzzleService.puzzlesIdJoinPost(puzzleId, player).subscribe({
-    //   next: (started: PuzzleJoinResult) => {
-    //     sessionStorage.setItem(
-    //       LOCAL_STORAGE_KEYS.PIECE_PUZZLE_PARTICIPANT_ID,
-    //       started.participantId,
-    //     );
-    //     sessionStorage.setItem(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_TOKEN, started.token ?? '');
-    //   },
-    //
-    //   error: (error) => {
-    //     console.error('Failed to start puzzle', error);
-    //   },
-    // });
   }
 }

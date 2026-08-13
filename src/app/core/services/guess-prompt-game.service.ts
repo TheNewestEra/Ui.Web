@@ -13,7 +13,6 @@ export class GuessPromptGameService {
   private readonly guessService = inject(GuessThePromptService);
   private readonly userStateService = inject(UserStateService);
 
-
   start(theme: string): Observable<void> {
     return this.guessService
       .gamesPost({ theme, player: this.createPlayer(), color: this.createColor() })
@@ -27,7 +26,7 @@ export class GuessPromptGameService {
     return this.guessService
       .gamesIdReplayPost(gameId, { player: this.createPlayer(), color: this.createColor() })
       .pipe(
-        tap(() => this.clearParticipantCredentials()),
+        tap(() => this.clearParticipantCredentials(gameId)),
         tap((response) => this.handleHostJoined(response)),
         map(() => undefined),
       );
@@ -36,12 +35,13 @@ export class GuessPromptGameService {
   private handleHostJoined(response: GamesPost202Response): void {
     this.storeHostToken(response.gameId, response.hostToken);
 
-    sessionStorage.setItem(LOCAL_STORAGE_KEYS.GUESS_PARTICIPANT_ID, response.participantId);
-    sessionStorage.setItem(LOCAL_STORAGE_KEYS.GUESS_TOKEN, response.token ?? '');
-    sessionStorage.setItem(LOCAL_STORAGE_KEYS.GUESS_GAME_ID, response.gameId);
     sessionStorage.setItem(
-      LOCAL_STORAGE_KEYS.GUESS_PLAYER_NAME,
-      this.userStateService.displayName(),
+      this.storageKey(LOCAL_STORAGE_KEYS.GUESS_PARTICIPANT_ID, response.gameId),
+      response.participantId,
+    );
+    sessionStorage.setItem(
+      this.storageKey(LOCAL_STORAGE_KEYS.GUESS_TOKEN, response.gameId),
+      response.token ?? '',
     );
 
     void this.router.navigate(['/games/guess-prompt', response.gameId]);
@@ -60,22 +60,21 @@ export class GuessPromptGameService {
   }
 
   private storeHostToken(gameId: string, hostToken: string): void {
-    sessionStorage.setItem(LOCAL_STORAGE_KEYS.GUESS_HOST_TOKEN, hostToken);
-    sessionStorage.setItem(LOCAL_STORAGE_KEYS.GUESS_HOST_GAME_ID, gameId);
+    sessionStorage.setItem(this.storageKey(LOCAL_STORAGE_KEYS.GUESS_HOST_TOKEN, gameId), hostToken);
   }
 
-  clearParticipantCredentials(): void {
-    sessionStorage.removeItem(LOCAL_STORAGE_KEYS.GUESS_PARTICIPANT_ID);
-    sessionStorage.removeItem(LOCAL_STORAGE_KEYS.GUESS_TOKEN);
-    sessionStorage.removeItem(LOCAL_STORAGE_KEYS.GUESS_GAME_ID);
-    sessionStorage.removeItem(LOCAL_STORAGE_KEYS.GUESS_PLAYER_NAME);
-    sessionStorage.removeItem(LOCAL_STORAGE_KEYS.GUESS_ANSWERED_ROUND);
+  clearParticipantCredentials(gameId: string): void {
+    sessionStorage.removeItem(this.storageKey(LOCAL_STORAGE_KEYS.GUESS_PARTICIPANT_ID, gameId));
+    sessionStorage.removeItem(this.storageKey(LOCAL_STORAGE_KEYS.GUESS_TOKEN, gameId));
+    sessionStorage.removeItem(this.storageKey(LOCAL_STORAGE_KEYS.GUESS_ANSWERED_ROUND, gameId));
   }
 
-  clearGameCredentials(): void {
-    this.clearParticipantCredentials();
+  clearGameCredentials(gameId: string): void {
+    this.clearParticipantCredentials(gameId);
+    sessionStorage.removeItem(this.storageKey(LOCAL_STORAGE_KEYS.GUESS_HOST_TOKEN, gameId));
+  }
 
-    sessionStorage.removeItem(LOCAL_STORAGE_KEYS.GUESS_HOST_TOKEN);
-    sessionStorage.removeItem(LOCAL_STORAGE_KEYS.GUESS_HOST_GAME_ID);
+  private storageKey(baseKey: string, gameId: string): string {
+    return `${baseKey}:${gameId}`;
   }
 }

@@ -10,4 +10,8 @@
   <app-button variant="outline" [leftIcon]="copied() ? 'check' : 'copy'" (clicked)="copy()">
     {{ copied() ? 'Copied!' : 'Copy Code' }}
   </app-button>
+
+  @if (copyError()) {
+    <p class="text-sm text-error">{{ copyError() }}</p>
+  }
 </div>

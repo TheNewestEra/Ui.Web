@@ -16,10 +16,12 @@ export class PiecePuzzleSocketService {
   readonly connected = signal(false);
 
   private readonly messageSubject = new Subject<PuzzleWsMessage>();
+  private readonly errorSubject = new Subject<string>();
 
   readonly messages = this.messageSubject.asObservable();
+  readonly errors = this.errorSubject.asObservable();
 
-  connect(gameId: string, player?: string, color?: string): void {
+  connect(gameId: string, player?: string, color?: string, joinOnOpen = false): void {
     this.disconnect();
 
     const url = `${WS_BASE_URL.PUZZLE}/puzzles/${gameId}/ws`;
@@ -29,7 +31,7 @@ export class PiecePuzzleSocketService {
     this.socket.addEventListener('open', () => {
       this.connected.set(true);
 
-      if (player) this.send({ type: PuzzleWsJoinRequestTypeEnum.Join, player, color });
+      if (joinOnOpen || player) this.join(player, color);
     });
 
     this.socket.addEventListener('message', (event) => {
@@ -42,18 +44,23 @@ export class PiecePuzzleSocketService {
       this.connected.set(false);
     });
 
-    this.socket.addEventListener('error', (error) => {
-      console.error('Puzzle WebSocket error', error);
+    this.socket.addEventListener('error', () => {
+      this.errorSubject.next('Connection to the puzzle was lost. Please refresh and try again.');
     });
   }
 
-  send(message: PuzzleWsClientMessage): void {
+  join(player?: string, color?: string): boolean {
+    return this.send({ type: PuzzleWsJoinRequestTypeEnum.Join, player, color });
+  }
+
+  send(message: PuzzleWsClientMessage): boolean {
     if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
-      console.warn('Cannot send puzzle message, socket is not open', message);
-      return;
+      this.errorSubject.next('The puzzle connection is not ready. Please try again.');
+      return false;
     }
 
     this.socket.send(JSON.stringify(message));
+    return true;
   }
 
   disconnect(): void {
