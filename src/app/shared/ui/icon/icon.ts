@@ -1,6 +1,7 @@
 import { Component, input } from '@angular/core';
 import {
   ArrowRight,
+  Check,
   ChevronLeft,
   ChevronRight,
   CircleAlert,
@@ -56,6 +57,7 @@ const usedIcons = {
   Clock,
   Copy,
   ArrowRight,
+  Check,
   Sparkle,
   CircleX,
   Layers3,

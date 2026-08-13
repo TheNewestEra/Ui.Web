@@ -13,9 +13,11 @@ export class CodeDisplayComponent {
   code = input.required<string>();
 
   copied = signal(false);
+  copyError = signal<string | null>(null);
 
   async copy(): Promise<void> {
     try {
+      this.copyError.set(null);
       await navigator.clipboard.writeText(this.code());
 
       this.copied.set(true);
@@ -23,8 +25,8 @@ export class CodeDisplayComponent {
       setTimeout(() => {
         this.copied.set(false);
       }, 2000);
-    } catch (error) {
-      console.error('Failed to copy code', error);
+    } catch {
+      this.copyError.set('Unable to copy the code. Please select and copy it manually.');
     }
   }
 }

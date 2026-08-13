@@ -67,9 +67,10 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
   private readonly guessPromptGameService = inject(GuessPromptGameService);
   private readonly friendsService = inject(FriendsService);
   private readonly invitesService = inject(InvitesService);
-  readonly userState = inject(UserStateService);
+  private readonly userState = inject(UserStateService);
 
   readonly GameStatus = GameStatus;
+  readonly isLoggedIn = this.userState.isLoggedIn;
 
   readonly gameId = toSignal(this.route.paramMap.pipe(map((params) => params.get('gameId'))), {
     initialValue: null,
@@ -91,8 +92,7 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
   readonly inviteTarget = new FormControl('', { nonNullable: true });
   private inviteRecipientsLoaded = false;
 
-  readonly joinedGameId = signal(sessionStorage.getItem(LOCAL_STORAGE_KEYS.GUESS_GAME_ID));
-  readonly participantId = signal(sessionStorage.getItem(LOCAL_STORAGE_KEYS.GUESS_PARTICIPANT_ID));
+  readonly participantId = signal<string | null>(null);
 
   readonly guessForm = new FormGroup({
     guess: new FormControl('', {
@@ -148,7 +148,7 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
   });
 
   readonly hasJoined = computed(() => {
-    return !!this.participantId() && this.joinedGameId() === this.gameId();
+    return !!this.participantId();
   });
 
   readonly isSpectator = computed(() => {
@@ -218,10 +218,7 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
   });
 
   readonly isHost = computed(() => {
-    return (
-      !!sessionStorage.getItem(LOCAL_STORAGE_KEYS.GUESS_HOST_TOKEN) &&
-      sessionStorage.getItem(LOCAL_STORAGE_KEYS.GUESS_HOST_GAME_ID) === this.gameId()
-    );
+    return !!sessionStorage.getItem(this.storageKey(LOCAL_STORAGE_KEYS.GUESS_HOST_TOKEN));
   });
 
   ngOnInit(): void {
@@ -231,9 +228,12 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
       },
 
       error: (error) => {
-        console.error('Guess Prompt WebSocket error', error);
         this.errorMessage.set('Connection to the game was lost.');
       },
+    });
+
+    this.guessPromptSocket.errors.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((message) => {
+      this.errorMessage.set(message);
     });
 
     this.route.paramMap
@@ -622,7 +622,8 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
 
     if (!gameId || this.game()?.status !== GameStatus.Waiting) return;
 
-    const hostToken = sessionStorage.getItem(LOCAL_STORAGE_KEYS.GUESS_HOST_TOKEN) ?? '';
+    const hostToken =
+      sessionStorage.getItem(this.storageKey(LOCAL_STORAGE_KEYS.GUESS_HOST_TOKEN)) ?? '';
 
     this.errorMessage.set(null);
 
@@ -632,8 +633,6 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
       })
       .subscribe({
         error: (error) => {
-          console.error('Unable to start game', error);
-
           this.errorMessage.set(error?.error?.error ?? 'Unable to start the game.');
         },
       });
@@ -731,8 +730,6 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
       .pipe(finalize(() => this.replaying.set(false)))
       .subscribe({
         error: (error) => {
-          console.error('Unable to replay game', error);
-
           this.errorMessage.set(error?.error?.error ?? 'Unable to replay the game.');
         },
       });
@@ -818,8 +815,10 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
     this.guessPromptService
       .gamesIdGuessPost(gameId, {
         index: this.currentRound() ?? 0,
-        participantId: sessionStorage.getItem(LOCAL_STORAGE_KEYS.GUESS_PARTICIPANT_ID) ?? '',
-        token: sessionStorage.getItem(LOCAL_STORAGE_KEYS.GUESS_TOKEN) ?? undefined,
+        participantId:
+          sessionStorage.getItem(this.storageKey(LOCAL_STORAGE_KEYS.GUESS_PARTICIPANT_ID)) ?? '',
+        token:
+          sessionStorage.getItem(this.storageKey(LOCAL_STORAGE_KEYS.GUESS_TOKEN)) ?? undefined,
         guess: guess,
       })
       .subscribe({
@@ -934,13 +933,8 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
   }
 
   private refreshPlayerIdentity(gameId: string): void {
-    const joinedGameId = sessionStorage.getItem(LOCAL_STORAGE_KEYS.GUESS_GAME_ID);
-
-    this.joinedGameId.set(joinedGameId);
     this.participantId.set(
-      joinedGameId === gameId
-        ? sessionStorage.getItem(LOCAL_STORAGE_KEYS.GUESS_PARTICIPANT_ID)
-        : null,
+      sessionStorage.getItem(`${LOCAL_STORAGE_KEYS.GUESS_PARTICIPANT_ID}:${gameId}`),
     );
   }
 
@@ -966,7 +960,7 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
   }
 
   private rememberAnsweredRound(gameId: string, roundIndex: number): void {
-    sessionStorage.setItem(LOCAL_STORAGE_KEYS.GUESS_ANSWERED_ROUND, `${gameId}:${roundIndex}`);
+    sessionStorage.setItem(`${LOCAL_STORAGE_KEYS.GUESS_ANSWERED_ROUND}:${gameId}`, `${roundIndex}`);
   }
 
   private wasRoundAnswered(roundIndex: number | null | undefined): boolean {
@@ -974,8 +968,10 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
 
     if (!gameId || roundIndex == null) return false;
 
-    return (
-      sessionStorage.getItem(LOCAL_STORAGE_KEYS.GUESS_ANSWERED_ROUND) === `${gameId}:${roundIndex}`
-    );
+    return sessionStorage.getItem(this.storageKey(LOCAL_STORAGE_KEYS.GUESS_ANSWERED_ROUND)) === `${roundIndex}`;
+  }
+
+  private storageKey(baseKey: string): string {
+    return `${baseKey}:${this.gameId()}`;
   }
 }

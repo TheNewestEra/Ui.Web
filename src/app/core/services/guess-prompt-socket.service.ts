@@ -12,8 +12,10 @@ export class GuessPromptSocketService {
   readonly connected = signal(false);
 
   private readonly messageSubject = new Subject<GuessPromptSocketMessage>();
+  private readonly errorSubject = new Subject<string>();
 
   readonly messages = this.messageSubject.asObservable();
+  readonly errors = this.errorSubject.asObservable();
 
   connect(gameId: string): void {
     this.disconnect();
@@ -36,8 +38,8 @@ export class GuessPromptSocketService {
       this.connected.set(false);
     });
 
-    this.socket.addEventListener('error', (error) => {
-      console.error('Guess Prompt WebSocket error', error);
+    this.socket.addEventListener('error', () => {
+      this.errorSubject.next('Connection to the game was lost. Please refresh and try again.');
     });
   }
 

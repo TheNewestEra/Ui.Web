@@ -1,5 +1,6 @@
 import { Component, computed, DestroyRef, inject, OnDestroy, OnInit, signal } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { KeyValuePipe } from '@angular/common';
+import { ActivatedRoute, Router } from '@angular/router';
 import {
   PiecePuzzleService,
   Puzzle,
@@ -32,12 +33,25 @@ import {
 import { ErrorAlertComponent } from '@shared/components/alert/error/error';
 import { PageLayoutComponent } from '@layout/page-layout/page-layout';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header';
-import { CardComponent } from '@shared/components/card/card';
 import { UserStateService } from '@core/services/user-state.service';
 import { PiecePuzzleSocketService } from '@core/services/piece-puzzle-socket.service';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { ButtonComponent } from '@shared/components/button/button';
 import { LOCAL_STORAGE_KEYS } from '@core/constants/local-storage-keys.constants';
+import { IconComponent } from '@shared/ui/icon/icon';
+import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { distinctUntilChanged, filter, finalize, map } from 'rxjs';
+import {
+  ApiInvitesPostRequestKindEnum,
+  FriendSummary,
+  FriendsService,
+  GroupSummary,
+  InvitesService,
+} from '@thenewestera/friends-ng';
+import {
+  LeaderboardComponent,
+  LeaderboardDisplayEntry,
+} from '@core/components/leaderboard/leaderboard';
 
 @Component({
   selector: 'app-piece-puzzle',
@@ -45,41 +59,59 @@ import { LOCAL_STORAGE_KEYS } from '@core/constants/local-storage-keys.constants
     ErrorAlertComponent,
     PageLayoutComponent,
     PageHeaderComponent,
-    CardComponent,
     ButtonComponent,
+    IconComponent,
+    ReactiveFormsModule,
+    KeyValuePipe,
+    LeaderboardComponent,
   ],
   templateUrl: './piece-puzzle.html',
   styleUrl: './piece-puzzle.css',
 })
 export class PiecePuzzleGamePage implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly router = inject(Router);
   private readonly piecePuzzleService = inject(PiecePuzzleService);
-  private readonly userStateService = inject(UserStateService);
   private readonly puzzleSocket = inject(PiecePuzzleSocketService);
-
-  private timerInterval?: ReturnType<typeof setInterval>;
-
-  private pendingMove: { cellA: number; cellB: number } | null = null;
+  private readonly friendsService = inject(FriendsService);
+  private readonly invitesService = inject(InvitesService);
+  readonly userState = inject(UserStateService);
 
   readonly PuzzleStatus = PuzzleStatus;
+  readonly isLoggedIn = this.userState.isLoggedIn;
 
-  private readonly destroyRef = inject(DestroyRef);
-
-  readonly gameId = this.route.snapshot.paramMap.get('gameId');
+  readonly gameId = signal<string | null>(null);
   readonly game = signal<Puzzle | null>(null);
   game$ = toObservable(this.game);
 
   readonly puzzleImage = signal<string | null>(null);
 
   readonly loading = signal(true);
+  readonly imageLoading = signal(true);
+  readonly joining = signal(false);
+  readonly starting = signal(false);
+  readonly replaying = signal(false);
   readonly errorMessage = signal<string | null>(null);
+  readonly shareMessage = signal<string | null>(null);
+  readonly inviteMessage = signal<string | null>(null);
+  readonly inviteLoading = signal(false);
+  readonly inviteRecipientsLoading = signal(false);
+  readonly inviteFriends = signal<FriendSummary[]>([]);
+  readonly inviteGroups = signal<GroupSummary[]>([]);
+  readonly inviteTarget = new FormControl('', { nonNullable: true });
+  private inviteRecipientsLoaded = false;
+  private joinOnNextConnection = false;
 
   readonly selectedTile = signal<number | null>(null);
-  readonly userColor = this.userStateService.color;
+  readonly participantId = signal<string | null>(null);
   readonly moving = signal(false);
   readonly solved = signal(false);
 
   readonly tileSelections = signal<ReadonlyMap<number, { player: string; color: string }>>(
+    new Map(),
+  );
+  readonly lastMoves = signal<ReadonlyMap<string, { cellA: number; cellB: number; color: string }>>(
     new Map(),
   );
 
@@ -88,6 +120,10 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
 
     return status === PuzzleStatus.Solved || status === PuzzleStatus.Timeout;
   });
+
+  private timerInterval?: ReturnType<typeof setInterval>;
+
+  private pendingMove: { cellA: number; cellB: number } | null = null;
 
   readonly lobbyRemainingMs = signal(0);
   readonly remainingMs = signal(0);
@@ -101,7 +137,56 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
   });
 
   readonly isHost = computed(() => {
-    return !!sessionStorage.getItem(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_HOST_TOKEN);
+    return !!sessionStorage.getItem(this.storageKey(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_HOST_TOKEN));
+  });
+
+  readonly hasJoined = computed(() => {
+    const participantId = this.participantId();
+    return !!participantId && !!this.game()?.participants.some(({ id }) => id === participantId);
+  });
+
+  readonly isSpectator = computed(
+    () => this.game()?.status !== PuzzleStatus.Waiting && !this.hasJoined(),
+  );
+
+  readonly canMove = computed(
+    () =>
+      this.game()?.status === PuzzleStatus.Playing &&
+      this.hasJoined() &&
+      !this.moving() &&
+      !!this.puzzleImage(),
+  );
+
+  readonly leaderboardEntries = computed<LeaderboardDisplayEntry[]>(() => {
+    const game = this.game();
+
+    // TODO(BE): Return participant ids and per-player scores so the puzzle can show complete
+    // standings. The current contract only identifies the solver and the puzzle's final score.
+    if (!game?.solvedBy || game.score == null) return [];
+
+    const solver = game.participants.find((participant) => participant.name === game.solvedBy);
+
+    return [
+      {
+        id: game.solvedBy,
+        name: game.solvedBy,
+        color: solver?.color ?? '#000000',
+        score: game.score,
+        rank: 1,
+      },
+    ];
+  });
+
+  readonly currentParticipant = computed(() => {
+    return this.game()?.participants.find((participant) => participant.id === this.participantId());
+  });
+
+  readonly participantColor = computed(() => this.currentParticipant()?.color ?? null);
+
+  readonly currentLeaderboardId = computed(() => {
+    const solver = this.game()?.solvedBy;
+
+    return solver === this.userState.displayName() ? solver : null;
   });
 
   constructor() {
@@ -111,25 +196,62 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    if (!this.gameId) {
-      this.errorMessage.set('Game not found.');
-      this.loading.set(false);
-      return;
-    }
-
-    this.loading.set(false);
-
-    const alreadyJoined = !!sessionStorage.getItem(this.participantStorageKey('participantId'));
-    const player = alreadyJoined ? undefined : this.userStateService.displayName();
-    const color =
-      alreadyJoined || this.userStateService.isLoggedIn() ? undefined : this.userColor();
-
-    this.puzzleSocket.connect(this.gameId, player, color!);
-
     this.puzzleSocket.messages.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((message) => {
       this.handleSocketMessage(message);
     });
-    // TODO: When ws loses connection, show a toast message
+
+    this.puzzleSocket.errors.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((message) => {
+      this.errorMessage.set(message);
+    });
+
+    this.route.paramMap
+      .pipe(
+        map((params) => params.get('gameId')),
+        filter((gameId): gameId is string => !!gameId),
+        distinctUntilChanged(),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((gameId) => this.initializeGame(gameId));
+  }
+
+  private initializeGame(gameId: string): void {
+    this.stopTimer();
+
+    const previousImage = this.puzzleImage();
+    if (previousImage) URL.revokeObjectURL(previousImage);
+
+    this.gameId.set(gameId);
+    this.game.set(null);
+    this.puzzleImage.set(null);
+    this.loading.set(true);
+    this.imageLoading.set(true);
+    this.errorMessage.set(null);
+    this.shareMessage.set(null);
+    this.inviteMessage.set(null);
+    this.inviteTarget.reset();
+    this.inviteFriends.set([]);
+    this.inviteGroups.set([]);
+    this.inviteRecipientsLoaded = false;
+    this.selectedTile.set(null);
+    this.tileSelections.set(new Map());
+    this.lastMoves.set(new Map());
+    this.pendingMove = null;
+    this.moving.set(false);
+    this.solved.set(false);
+    this.lobbyRemainingMs.set(0);
+    this.remainingMs.set(0);
+    this.refreshPlayerIdentity();
+
+    const joinOnOpen = this.joinOnNextConnection;
+    this.joinOnNextConnection = false;
+    const player =
+      joinOnOpen && !this.userState.isLoggedIn() ? this.userState.displayName() : undefined;
+    const color =
+      joinOnOpen && !this.userState.isLoggedIn()
+        ? (this.userState.color() ?? undefined)
+        : undefined;
+
+    this.puzzleSocket.connect(gameId, player, color, joinOnOpen);
   }
 
   ngOnDestroy(): void {
@@ -139,20 +261,142 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
 
     if (imageUrl) URL.revokeObjectURL(imageUrl);
 
+    this.clearParticipantCredentials();
+
     this.puzzleSocket.disconnect();
   }
 
   startGame(): void {
-    if (!this.gameId) return;
+    const gameId = this.gameId();
+
+    if (!gameId || !this.isHost() || this.starting()) return;
 
     const hostToken =
-      sessionStorage.getItem(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_HOST_TOKEN) ?? undefined;
+      sessionStorage.getItem(this.storageKey(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_HOST_TOKEN)) ??
+      undefined;
 
-    this.piecePuzzleService.puzzlesIdStartPost(this.gameId, { hostToken }).subscribe({
-      error: (error) => {
-        console.error('Unable to start puzzle', error);
-      },
-    });
+    this.starting.set(true);
+    this.errorMessage.set(null);
+
+    this.piecePuzzleService
+      .puzzlesIdStartPost(gameId, { hostToken })
+      .pipe(finalize(() => this.starting.set(false)))
+      .subscribe({
+        error: (error) => {
+          this.errorMessage.set(error?.error?.error ?? 'Unable to start the puzzle.');
+        },
+      });
+  }
+
+  joinGame(): void {
+    const gameId = this.gameId();
+
+    if (
+      !gameId ||
+      this.game()?.status !== PuzzleStatus.Waiting ||
+      this.hasJoined() ||
+      this.joining()
+    ) {
+      return;
+    }
+
+    this.joining.set(true);
+    this.errorMessage.set(null);
+
+    const player = this.userState.isLoggedIn() ? undefined : this.userState.displayName();
+    const color = this.userState.isLoggedIn() ? undefined : (this.userState.color() ?? undefined);
+
+    if (!this.puzzleSocket.join(player, color)) {
+      this.joining.set(false);
+      this.errorMessage.set('The game connection is not ready. Please try again.');
+    }
+  }
+
+  async shareGame(): Promise<void> {
+    const url = window.location.href;
+
+    this.shareMessage.set(null);
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: 'Join my Piece Puzzle game',
+          text: 'Join my Piece Puzzle game before it starts.',
+          url,
+        });
+        this.shareMessage.set('Game shared.');
+        return;
+      }
+
+      await navigator.clipboard.writeText(url);
+      this.shareMessage.set('Game link copied.');
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') return;
+
+      this.shareMessage.set('Unable to share the game link.');
+    }
+  }
+
+  sendGameInvite(): void {
+    const gameId = this.gameId();
+    const target = this.inviteTarget.value;
+
+    if (!gameId || this.game()?.status !== PuzzleStatus.Waiting || !target) return;
+
+    const [targetType, targetId] = target.split(':', 2);
+
+    if (!targetId) return;
+
+    this.inviteLoading.set(true);
+    this.inviteMessage.set(null);
+
+    this.invitesService
+      .apiInvitesPost({
+        kind: ApiInvitesPostRequestKindEnum.Puzzle,
+        sessionId: gameId,
+        ...(targetType === 'friend' ? { friendId: targetId } : { groupId: targetId }),
+      })
+      .pipe(finalize(() => this.inviteLoading.set(false)))
+      .subscribe({
+        next: (response) => {
+          this.inviteTarget.reset();
+          this.inviteMessage.set(
+            response.invited === 1 ? 'Invitation sent.' : `${response.invited} invitations sent.`,
+          );
+        },
+        error: (error) => {
+          this.inviteMessage.set(error?.error?.error ?? 'Unable to send the invitation.');
+        },
+      });
+  }
+
+  replayGame(): void {
+    const gameId = this.gameId();
+
+    if (!gameId || this.replaying() || !this.gameEnded()) return;
+
+    this.replaying.set(true);
+    this.errorMessage.set(null);
+
+    this.piecePuzzleService
+      .puzzlesIdReplayPost(gameId)
+      .pipe(finalize(() => this.replaying.set(false)))
+      .subscribe({
+        next: (response) => {
+          this.clearParticipantCredentials();
+
+          sessionStorage.setItem(
+            `${LOCAL_STORAGE_KEYS.PIECE_PUZZLE_HOST_TOKEN}:${response.puzzleId}`,
+            response.hostToken,
+          );
+          this.joinOnNextConnection = true;
+
+          void this.router.navigate(['/games/piece-puzzle', response.puzzleId]);
+        },
+        error: (error) => {
+          this.errorMessage.set(error?.error?.error ?? 'Unable to restart the puzzle.');
+        },
+      });
   }
 
   getTilePosition(index: number, gridSize: number): string {
@@ -167,6 +411,8 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
   }
 
   selectTile(index: number): void {
+    if (!this.canMove()) return;
+
     const selected = this.selectedTile();
 
     if (selected === null) {
@@ -252,7 +498,9 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
       new Map(message.selections.map((s) => [s.cell, { player: s.player, color: s.color }])),
     );
 
-    const myParticipantId = sessionStorage.getItem(this.participantStorageKey('participantId'));
+    const myParticipantId = sessionStorage.getItem(
+      this.storageKey(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_PARTICIPANT_ID),
+    );
     this.selectedTile.set(
       message.selections.find((s) => s.participantId === myParticipantId)?.cell ?? null,
     );
@@ -276,6 +524,10 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
       participants: message.participants,
       selections: message.selections,
     });
+    this.loading.set(false);
+    this.errorMessage.set(null);
+
+    if (message.status === PuzzleStatus.Waiting) this.loadInviteRecipients();
   }
 
   private handleMove(message: PuzzleWsMoveMessage): void {
@@ -293,6 +545,15 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
     });
 
     this.clearTileSelections(message.cellA, message.cellB);
+    this.lastMoves.update((moves) => {
+      const next = new Map(moves);
+      next.set(message.by, {
+        cellA: message.cellA,
+        cellB: message.cellB,
+        color: message.color,
+      });
+      return next;
+    });
 
     // This broadcast reaches every connected client, including whoever sent
     // the move — that's how the sender learns their own move succeeded now
@@ -350,13 +611,18 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
     this.stopTimer();
   }
 
-  /** Direct reply to our own `join` message (see `PiecePuzzleSocketService.
-   * connect()`) — persists the participantId/token every later `move`/
-   * `select` message must carry, scoped to this puzzle so they can't leak
-   * into a different one played in the same browser session. */
+  /** Persists the credentials every later move/select message must carry. */
   private handleJoinResult(message: PuzzleWsJoinResultMessage): void {
-    sessionStorage.setItem(this.participantStorageKey('participantId'), message.participantId);
-    sessionStorage.setItem(this.participantStorageKey('token'), message.token ?? '');
+    sessionStorage.setItem(
+      this.storageKey(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_PARTICIPANT_ID),
+      message.participantId,
+    );
+    sessionStorage.setItem(
+      this.storageKey(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_TOKEN),
+      message.token ?? '',
+    );
+    this.participantId.set(message.participantId);
+    this.joining.set(false);
   }
 
   /** Direct reply to a rejected `join`/`move`/`select` message — the WS
@@ -364,12 +630,14 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
    * There's no per-call `.subscribe({error})` to catch this on any more, so
    * it's handled centrally here instead. */
   private handleError(message: PuzzleWsErrorMessage): void {
-    console.error(`Puzzle ${message.action} failed:`, message.error);
+    this.errorMessage.set(message.error || 'Unable to update the puzzle.');
 
     if (message.action === PuzzleWsErrorMessageActionEnum.Move) {
       this.pendingMove = null;
       this.moving.set(false);
     }
+
+    if (message.action === PuzzleWsErrorMessageActionEnum.Join) this.joining.set(false);
   }
 
   private handleTileSelected(message: PuzzleWsTileSelectedMessage): void {
@@ -443,16 +711,24 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
     // If there is an image already, it will NOT call the BE
     if (this.puzzleImage()) return;
 
-    this.piecePuzzleService.puzzlesIdImageGet(this.gameId!).subscribe({
-      next: (image: Blob) => {
-        const imageUrl = URL.createObjectURL(image);
-        this.puzzleImage.set(imageUrl);
-      },
+    this.imageLoading.set(true);
 
-      error: (error) => {
-        console.error('Failed to load puzzle image', error);
-      },
-    });
+    const gameId = this.gameId();
+    if (!gameId) return;
+
+    this.piecePuzzleService
+      .puzzlesIdImageGet(gameId)
+      .pipe(finalize(() => this.imageLoading.set(false)))
+      .subscribe({
+        next: (image: Blob) => {
+          const imageUrl = URL.createObjectURL(image);
+          this.puzzleImage.set(imageUrl);
+        },
+
+        error: (error) => {
+          this.errorMessage.set(error?.error?.error ?? 'Unable to load the puzzle image.');
+        },
+      });
   }
 
   private updateTimers(puzzleStateMessage: PuzzleWsStateMessage): void {
@@ -507,7 +783,7 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
   }
 
   private moveTiles(cellA: number, cellB: number): void {
-    if (!this.gameId || this.moving()) return;
+    if (!this.gameId() || !this.canMove()) return;
 
     this.moving.set(true);
     this.pendingMove = { cellA, cellB };
@@ -520,19 +796,25 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
       type: PuzzleWsMoveRequestTypeEnum.Move,
       cellA,
       cellB,
-      participantId: sessionStorage.getItem(this.participantStorageKey('participantId')) ?? '',
-      token: sessionStorage.getItem(this.participantStorageKey('token')) ?? undefined,
+      participantId:
+        sessionStorage.getItem(this.storageKey(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_PARTICIPANT_ID)) ??
+        '',
+      token:
+        sessionStorage.getItem(this.storageKey(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_TOKEN)) ?? undefined,
     });
   }
 
   private broadcastTileSelection(cell: number): void {
-    if (!this.gameId) return;
+    if (!this.gameId() || !this.canMove()) return;
 
     this.puzzleSocket.send({
       type: PuzzleWsSelectRequestTypeEnum.Select,
       cell,
-      participantId: sessionStorage.getItem(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_PARTICIPANT_ID) ?? '',
-      token: sessionStorage.getItem(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_TOKEN) ?? undefined,
+      participantId:
+        sessionStorage.getItem(this.storageKey(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_PARTICIPANT_ID)) ??
+        '',
+      token:
+        sessionStorage.getItem(this.storageKey(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_TOKEN)) ?? undefined,
     });
   }
 
@@ -541,25 +823,55 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
    * puzzle.model.ts `deselectTile()`) and broadcasts a `tile_deselected`
    * naming it back to every connected client, including us. */
   private broadcastTileDeselection(): void {
-    if (!this.gameId) return;
+    if (!this.gameId() || !this.hasJoined()) return;
 
     this.puzzleSocket.send({
       type: PuzzleWsDeselectRequestTypeEnum.Deselect,
-      participantId: sessionStorage.getItem(this.participantStorageKey('participantId')) ?? '',
-      token: sessionStorage.getItem(this.participantStorageKey('token')) ?? undefined,
+      participantId:
+        sessionStorage.getItem(this.storageKey(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_PARTICIPANT_ID)) ??
+        '',
+      token:
+        sessionStorage.getItem(this.storageKey(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_TOKEN)) ?? undefined,
     });
   }
 
-  /** Scopes the anonymous-guest participant credentials to this puzzle's id
-   * — a bare, unscoped key would leak one puzzle's participantId/token into
-   * the next puzzle played in the same browser session. */
-  private participantStorageKey(kind: 'participantId' | 'token'): string {
-    const base =
-      kind === 'participantId'
-        ? LOCAL_STORAGE_KEYS.PIECE_PUZZLE_PARTICIPANT_ID
-        : LOCAL_STORAGE_KEYS.PIECE_PUZZLE_TOKEN;
+  private refreshPlayerIdentity(): void {
+    this.participantId.set(
+      sessionStorage.getItem(this.storageKey(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_PARTICIPANT_ID)),
+    );
+  }
 
-    return `${base}:${this.gameId}`;
+  private clearParticipantCredentials(): void {
+    sessionStorage.removeItem(this.storageKey(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_PARTICIPANT_ID));
+    sessionStorage.removeItem(this.storageKey(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_TOKEN));
+    sessionStorage.removeItem(this.storageKey(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_HOST_TOKEN));
+
+    this.participantId.set(null);
+  }
+
+  private storageKey(baseKey: string): string {
+    return `${baseKey}:${this.gameId()}`;
+  }
+
+  private loadInviteRecipients(): void {
+    if (!this.userState.isLoggedIn() || this.inviteRecipientsLoaded) return;
+
+    this.inviteRecipientsLoaded = true;
+    this.inviteRecipientsLoading.set(true);
+
+    this.friendsService
+      .apiFriendsGet()
+      .pipe(finalize(() => this.inviteRecipientsLoading.set(false)))
+      .subscribe({
+        next: (response) => {
+          this.inviteFriends.set(response.friends);
+          this.inviteGroups.set(response.groups);
+        },
+        error: () => {
+          this.inviteRecipientsLoaded = false;
+          this.inviteMessage.set('Unable to load friends and groups.');
+        },
+      });
   }
 
   private stopTimer(): void {

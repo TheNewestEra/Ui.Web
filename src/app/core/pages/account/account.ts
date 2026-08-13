@@ -65,6 +65,7 @@ export class AccountPage {
     if (this.registrationCode() === null) return;
 
     try {
+      this.registerErrorMessage.set(null);
       await navigator.clipboard.writeText(this.registrationCode()!);
 
       this.copied.set(true);
@@ -72,8 +73,8 @@ export class AccountPage {
       setTimeout(() => {
         this.copied.set(false);
       }, 2000);
-    } catch (error) {
-      console.error('Failed to copy code', error);
+    } catch {
+      this.registerErrorMessage.set('Unable to copy the code. Please select and copy it manually.');
     }
   }
 
