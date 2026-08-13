@@ -39,13 +39,9 @@ export class UserStateService {
   }
 
   private loadUser(): User | null {
-    console.log('loadUser');
     const stored = localStorage.getItem(LOCAL_STORAGE_KEYS.USER);
 
-    console.log(stored);
-
     if (!stored) {
-      console.log('stored nothing');
       if (localStorage.getItem(LOCAL_STORAGE_KEYS.COLOUR) === null)
         localStorage.setItem(LOCAL_STORAGE_KEYS.COLOUR, this.generateUserColour());
 
