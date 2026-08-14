@@ -4,10 +4,7 @@
 
   <div card-content class="flex flex-col gap-3">
     @if (hasRated()) {
-      <div class="flex items-center gap-2 text-success">
-        <app-icon name="circle-check" class="size-5" />
-        <span class="font-medium">Thanks for rating!</span>
-      </div>
+      <app-success-alert>Thanks for rating!</app-success-alert>
     }
 
     <div class="rating rating-lg">
@@ -38,7 +35,7 @@
     }
 
     @if (errorMessage()) {
-      <p class="text-sm text-error">{{ errorMessage() }}</p>
+      <app-error-alert [inline]="true" class="text-sm">{{ errorMessage() }}</app-error-alert>
     }
   </div>
 </app-card>

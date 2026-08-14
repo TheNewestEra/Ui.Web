@@ -98,16 +98,17 @@
             <div class="flex flex-col gap-3 p-6 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 @if (isHost() || hasJoined()) {
-                  <p class="flex items-center gap-2 font-medium text-success">
-                    <app-icon name="circle-check" class="size-5" />
+                  <app-success-alert [inline]="true" class="font-medium">
                     You have joined as a player
-                  </p>
+                  </app-success-alert>
                 } @else {
                   <p class="text-sm text-base-content/60">Join before the timer ends to play.</p>
                 }
 
                 @if (joinErrorMessage()) {
-                  <p class="mt-2 text-sm text-error">{{ joinErrorMessage() }}</p>
+                  <app-error-alert [inline]="true" class="mt-2 text-sm">
+                    {{ joinErrorMessage() }}
+                  </app-error-alert>
                 }
 
                 @if (shareMessage()) {
