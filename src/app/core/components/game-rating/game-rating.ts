@@ -75,7 +75,7 @@ export class GameRatingComponent {
 
   private storageKey(): string {
     const ratedPrefix =
-      this.gameType() == 'guess'
+      this.gameType() === 'guess'
         ? LOCAL_STORAGE_KEYS.GUESS_RATED_GAME
         : LOCAL_STORAGE_KEYS.PIECE_PUZZLE_RATED;
     return `${ratedPrefix}:${this.gameId()}`;
