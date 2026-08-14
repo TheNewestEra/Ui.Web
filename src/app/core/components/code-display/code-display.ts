@@ -1,10 +1,11 @@
 import { ChangeDetectionStrategy, Component, input, signal } from '@angular/core';
 import { ButtonComponent } from '@shared/components/button/button';
+import { ErrorAlertComponent } from '@shared/components/alert/error/error';
 
 @Component({
   selector: 'app-code-display',
   standalone: true,
-  imports: [ButtonComponent],
+  imports: [ButtonComponent, ErrorAlertComponent],
   templateUrl: './code-display.html',
   styleUrl: './code-display.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

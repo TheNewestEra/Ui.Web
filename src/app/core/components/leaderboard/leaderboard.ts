@@ -24,6 +24,7 @@ import {
 } from '@thenewestera/leaderboard-ng';
 import { FriendsService } from '@thenewestera/friends-ng';
 import { UserStateService } from '@core/services/user-state.service';
+import { ErrorAlertComponent } from '@shared/components/alert/error/error';
 
 export interface LeaderboardDisplayEntry {
   id: string;
@@ -44,6 +45,7 @@ export interface LeaderboardDisplayEntry {
     FormFieldComponent,
     SelectComponent,
     ButtonComponent,
+    ErrorAlertComponent,
   ],
   templateUrl: './leaderboard.html',
   styleUrl: './leaderboard.css',

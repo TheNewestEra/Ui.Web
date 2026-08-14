@@ -10,17 +10,43 @@
     }
 
     @if (successMessage()) {
-      <div class="rounded-box border border-success/30 bg-success/10 p-4 text-success">
-        <div class="flex items-center gap-3">
-          <app-icon name="circle-check" class="size-5" />
-          <span>{{ successMessage() }}</span>
-        </div>
-      </div>
+      <app-success-alert>{{ successMessage() }}</app-success-alert>
     }
 
     @if (loading()) {
-      <div class="flex min-h-64 items-center justify-center">
-        <span class="loading loading-spinner loading-lg"></span>
+      <div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]" aria-busy="true" aria-label="Loading friends">
+        <div class="flex min-w-0 flex-col gap-6">
+          @for (_ of [1, 2, 3]; track $index) {
+            <app-card>
+              <div card-title class="skeleton h-7 w-40"></div>
+              <div card-subtitle class="skeleton h-4 w-72 max-w-full"></div>
+              <div card-content class="flex flex-col gap-3">
+                @for (_ of [1, 2, 3]; track $index) {
+                  <div class="flex items-center gap-3 rounded-box border border-base-300 p-4">
+                    <span class="skeleton size-10 shrink-0 rounded-full"></span>
+                    <div class="flex flex-1 flex-col gap-2">
+                      <span class="skeleton h-4 w-32"></span>
+                      <span class="skeleton h-3 w-24"></span>
+                    </div>
+                    <span class="skeleton h-8 w-20"></span>
+                  </div>
+                }
+              </div>
+            </app-card>
+          }
+        </div>
+
+        <aside class="flex flex-col gap-6">
+          @for (_ of [1, 2]; track $index) {
+            <app-card>
+              <div card-title class="skeleton h-7 w-36"></div>
+              <div card-content class="flex flex-col gap-4">
+                <div class="skeleton h-12 w-full"></div>
+                <div class="skeleton h-10 w-full"></div>
+              </div>
+            </app-card>
+          }
+        </aside>
       </div>
     } @else {
       <div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
@@ -145,9 +171,9 @@
                       >
                         <div class="flex min-w-0 items-center gap-2">
                           <span
-                            class="size-3 shrink-0 rounded-full ring-2 ring-base-300"
+                            class="flex size-8 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white ring-2 ring-base-300"
                             [style.background-color]="member.color"
-                          ></span>
+                          >{{ member.username.trim().charAt(0).toUpperCase() }}</span>
                           <span class="truncate font-medium">{{ member.username }}</span>
                         </div>
                         <app-button

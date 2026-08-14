@@ -10,13 +10,14 @@ import {
 import { finalize } from 'rxjs';
 import { BrowseService } from '@thenewestera/browse-ng';
 import { CardComponent } from '@shared/components/card/card';
-import { IconComponent } from '@shared/ui/icon/icon';
 import { UserStateService } from '@core/services/user-state.service';
 import { LOCAL_STORAGE_KEYS } from '@core/constants/local-storage-keys.constants';
+import { SuccessAlertComponent } from '@shared/components/alert/success/success';
+import { ErrorAlertComponent } from '@shared/components/alert/error/error';
 
 @Component({
   selector: 'app-game-rating',
-  imports: [CardComponent, IconComponent],
+  imports: [CardComponent, SuccessAlertComponent, ErrorAlertComponent],
   templateUrl: './game-rating.html',
   styleUrl: './game-rating.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

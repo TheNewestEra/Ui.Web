@@ -2,11 +2,11 @@ import { Component, input } from '@angular/core';
 import { IconComponent } from '@shared/ui/icon/icon';
 
 @Component({
-  selector: 'app-error-alert',
+  selector: 'app-success-alert',
   imports: [IconComponent],
-  templateUrl: './error.html',
-  styleUrl: './error.css',
+  templateUrl: './success.html',
+  styleUrl: './success.css',
 })
-export class ErrorAlertComponent {
+export class SuccessAlertComponent {
   inline = input(false);
 }
