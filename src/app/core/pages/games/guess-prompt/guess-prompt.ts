@@ -60,6 +60,7 @@ import {
   LeaderboardComponent,
   LeaderboardDisplayEntry,
 } from '@core/components/leaderboard/leaderboard';
+import { GameRatingComponent } from '@core/components/game-rating/game-rating';
 
 const MAX_VISIBLE_GUESSES = 5;
 const GUESS_VISIBILITY_MS = 8_000;
@@ -77,6 +78,7 @@ const GUESS_VISIBILITY_MS = 8_000;
     ErrorAlertComponent,
     FormFieldComponent,
     LeaderboardComponent,
+    GameRatingComponent,
   ],
   templateUrl: './guess-prompt.html',
   styleUrl: './guess-prompt.css',

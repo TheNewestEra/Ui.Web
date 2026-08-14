@@ -1,0 +1,4 @@
+.rating input:disabled:checked,
+.rating input:disabled:has(~ input:checked) {
+  opacity: 1;
+}

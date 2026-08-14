@@ -241,6 +241,10 @@
               </p>
             </div>
 
+            @if (hasJoined()) {
+              <app-game-rating class="w-full" [gameId]="game.id" />
+            }
+
             <app-leaderboard
               class="w-full"
               [entries]="leaderboardEntries()"
