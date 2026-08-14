@@ -30,6 +30,10 @@ export class ButtonComponent {
   rightIcon = input<string>();
 
   iconOnly = input(false);
+  fullWidth = input(false);
+  active = input(false);
+  ariaLabel = input<string>();
+  title = input<string>();
 
   classes = computed(() => {
     const variantClasses = {
@@ -48,6 +52,8 @@ export class ButtonComponent {
       this.size() === 'sm' && 'btn-sm',
       this.size() === 'lg' && 'btn-lg',
       this.loading() && 'loading',
+      this.fullWidth() && 'w-full justify-start',
+      this.active() && 'btn-active',
     ]
       .filter(Boolean)
       .join(' ');

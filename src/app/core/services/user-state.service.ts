@@ -30,6 +30,7 @@ export class UserStateService {
     this._user.set(null);
 
     localStorage.removeItem(LOCAL_STORAGE_KEYS.USER);
+    this.generateRandomData();
   }
 
   private generateUserColour(): string {
@@ -42,15 +43,7 @@ export class UserStateService {
     const stored = localStorage.getItem(LOCAL_STORAGE_KEYS.USER);
 
     if (!stored) {
-      if (localStorage.getItem(LOCAL_STORAGE_KEYS.COLOUR) === null)
-        localStorage.setItem(LOCAL_STORAGE_KEYS.COLOUR, this.generateUserColour());
-
-      if (localStorage.getItem(LOCAL_STORAGE_KEYS.USERNAME) === null) {
-        const randomNumbers = Array.from({ length: 3 }, () => Math.floor(Math.random() * 10)).join(
-          '',
-        );
-        localStorage.setItem(LOCAL_STORAGE_KEYS.USERNAME, `Guest_${randomNumbers}`);
-      }
+      this.generateRandomData();
       return null;
     }
 
@@ -63,6 +56,18 @@ export class UserStateService {
     } catch {
       localStorage.removeItem(LOCAL_STORAGE_KEYS.USER);
       return null;
+    }
+  }
+
+  private generateRandomData() {
+    if (localStorage.getItem(LOCAL_STORAGE_KEYS.COLOUR) === null)
+      localStorage.setItem(LOCAL_STORAGE_KEYS.COLOUR, this.generateUserColour());
+
+    if (localStorage.getItem(LOCAL_STORAGE_KEYS.USERNAME) === null) {
+      const randomNumbers = Array.from({ length: 3 }, () => Math.floor(Math.random() * 10)).join(
+        '',
+      );
+      localStorage.setItem(LOCAL_STORAGE_KEYS.USERNAME, `Guest_${randomNumbers}`);
     }
   }
 }
