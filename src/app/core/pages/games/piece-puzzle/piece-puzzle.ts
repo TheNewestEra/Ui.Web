@@ -33,6 +33,7 @@ import {
   WsStatusMessageTypeEnum,
 } from '@thenewestera/puzzle-ng';
 import { ErrorAlertComponent } from '@shared/components/alert/error/error';
+import { SuccessAlertComponent } from '@shared/components/alert/success/success';
 import { PageLayoutComponent } from '@layout/page-layout/page-layout';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header';
 import { UserStateService } from '@core/services/user-state.service';
@@ -61,6 +62,7 @@ import { GameRatingComponent } from '@core/components/game-rating/game-rating';
   selector: 'app-piece-puzzle',
   imports: [
     ErrorAlertComponent,
+    SuccessAlertComponent,
     PageLayoutComponent,
     PageHeaderComponent,
     ButtonComponent,
@@ -145,7 +147,10 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
 
   readonly isHost = computed(() => {
     const gameId = this.gameId();
-    return !!gameId && !!this.piecePuzzleGameService.get(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_HOST_TOKEN, gameId);
+    return (
+      !!gameId &&
+      !!this.piecePuzzleGameService.get(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_HOST_TOKEN, gameId)
+    );
   });
 
   readonly hasJoined = computed(() => {
@@ -288,7 +293,8 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
     if (!gameId || !this.isHost() || this.starting()) return;
 
     const hostToken =
-      this.piecePuzzleGameService.get(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_HOST_TOKEN, gameId) ?? undefined;
+      this.piecePuzzleGameService.get(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_HOST_TOKEN, gameId) ??
+      undefined;
 
     this.starting.set(true);
     this.errorMessage.set(null);
@@ -857,7 +863,8 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
       cellB,
       participantId: this.participantId() ?? '',
       token:
-        this.piecePuzzleGameService.get(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_TOKEN, this.gameId()!) ?? undefined,
+        this.piecePuzzleGameService.get(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_TOKEN, this.gameId()!) ??
+        undefined,
     });
   }
 
@@ -869,7 +876,8 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
       cell,
       participantId: this.participantId() ?? '',
       token:
-        this.piecePuzzleGameService.get(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_TOKEN, this.gameId()!) ?? undefined,
+        this.piecePuzzleGameService.get(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_TOKEN, this.gameId()!) ??
+        undefined,
     });
   }
 
@@ -884,7 +892,8 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
       type: PuzzleWsDeselectRequestTypeEnum.Deselect,
       participantId: this.participantId() ?? '',
       token:
-        this.piecePuzzleGameService.get(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_TOKEN, this.gameId()!) ?? undefined,
+        this.piecePuzzleGameService.get(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_TOKEN, this.gameId()!) ??
+        undefined,
     });
   }
 
@@ -904,7 +913,6 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
 
     if (clearCurrentIdentity) this.participantId.set(null);
   }
-
 
   private loadInviteRecipients(): void {
     if (!this.userState.isLoggedIn() || this.inviteRecipientsLoaded) return;

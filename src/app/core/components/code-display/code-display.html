@@ -12,6 +12,6 @@
   </app-button>
 
   @if (copyError()) {
-    <p class="text-sm text-error">{{ copyError() }}</p>
+    <app-error-alert [inline]="true" class="text-sm">{{ copyError() }}</app-error-alert>
   }
 </div>

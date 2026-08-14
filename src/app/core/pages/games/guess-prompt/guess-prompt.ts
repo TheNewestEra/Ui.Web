@@ -46,6 +46,7 @@ import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { PageLayoutComponent } from '@layout/page-layout/page-layout';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header';
 import { ErrorAlertComponent } from '@shared/components/alert/error/error';
+import { SuccessAlertComponent } from '@shared/components/alert/success/success';
 import { FormFieldComponent } from '@shared/components/form/form-field/form-field';
 import { GuessPromptGameService } from '@core/services/guess-prompt-game.service';
 import {
@@ -79,6 +80,7 @@ const GUESS_VISIBILITY_MS = 8_000;
     FormFieldComponent,
     LeaderboardComponent,
     GameRatingComponent,
+    SuccessAlertComponent,
   ],
   templateUrl: './guess-prompt.html',
   styleUrl: './guess-prompt.css',
@@ -272,7 +274,9 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
 
   readonly isHost = computed(() => {
     const gameId = this.gameId();
-    return !!gameId && !!this.guessPromptGameService.get(LOCAL_STORAGE_KEYS.GUESS_HOST_TOKEN, gameId);
+    return (
+      !!gameId && !!this.guessPromptGameService.get(LOCAL_STORAGE_KEYS.GUESS_HOST_TOKEN, gameId)
+    );
   });
 
   ngOnInit(): void {
@@ -573,7 +577,10 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
 
       if (existingIndex >= 0) {
         const existing = game.participants[existingIndex];
-        if (existing.color === message.color && (!message.participantId || existing.id === message.participantId)) {
+        if (
+          existing.color === message.color &&
+          (!message.participantId || existing.id === message.participantId)
+        ) {
           return game;
         }
 
@@ -1186,7 +1193,11 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
   private rememberAnsweredRound(roundIndex: number): void {
     const gameId = this.gameId();
     if (gameId)
-      this.guessPromptGameService.set(LOCAL_STORAGE_KEYS.GUESS_ANSWERED_ROUND, gameId, `${roundIndex}`);
+      this.guessPromptGameService.set(
+        LOCAL_STORAGE_KEYS.GUESS_ANSWERED_ROUND,
+        gameId,
+        `${roundIndex}`,
+      );
   }
 
   private wasRoundAnswered(roundIndex: number | null | undefined): boolean {
