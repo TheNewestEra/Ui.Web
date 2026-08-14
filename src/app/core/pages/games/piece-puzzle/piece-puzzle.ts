@@ -180,19 +180,34 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
   readonly leaderboardEntries = computed<LeaderboardDisplayEntry[]>(() => {
     const game = this.game();
 
-    if (!game?.results.length) return [];
+    if (!game) return [];
 
-    return game.results.map((result, index) => {
-      const participant = game.participants.find(({ id }) => id === result.participantId);
+    const scores = new Map(game.results.map((result) => [result.participantId, result.score]));
+    const entries = game.participants.map((participant) => ({
+      id: participant.id,
+      name: participant.name,
+      color: participant.color,
+      score: scores.get(participant.id) ?? 0,
+    }));
 
-      return {
+    for (const result of game.results) {
+      if (entries.some(({ id }) => id === result.participantId)) continue;
+
+      const participant = game.participants.find(
+        (candidate) => candidate.id === result.participantId,
+      );
+
+      entries.push({
         id: result.participantId,
         name: participant?.name ?? 'Unknown player',
-        color: participant?.color ?? '#000000',
+        color: participant?.color ?? 'transparent',
         score: result.score,
-        rank: index + 1,
-      };
-    });
+      });
+    }
+
+    return entries
+      .sort((a, b) => b.score - a.score)
+      .map((entry, index) => ({ ...entry, rank: index + 1 }));
   });
 
   readonly currentParticipant = computed(() => {
@@ -203,6 +218,16 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
   });
 
   readonly participantColor = computed(() => this.currentParticipant()?.color ?? null);
+
+  readonly currentPlayerScore = computed(() => {
+    const currentParticipant = this.currentParticipant();
+    if (!currentParticipant) return 0;
+
+    return (
+      this.game()?.results.find(({ participantId }) => participantId === currentParticipant.id)
+        ?.score ?? 0
+    );
+  });
 
   constructor() {
     this.game$.subscribe((game) => {
@@ -551,6 +576,8 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
       return {
         ...game,
         board,
+        results:
+          message.score == null ? game.results : this.addMoveScore(game, message.by, message.score),
       };
     });
 
@@ -600,6 +627,23 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
     this.tileSelections.set(new Map());
     this.stopTimer();
     this.clearParticipantCredentials(false);
+  }
+
+  private addMoveScore(game: Puzzle, playerName: string, score: number): Puzzle['results'] {
+    const participant = game.participants.find(({ name }) => name === playerName);
+    if (!participant) return game.results;
+
+    const existingResult = game.results.find(
+      ({ participantId }) => participantId === participant.id,
+    );
+
+    if (!existingResult) {
+      return [...game.results, { participantId: participant.id, score }];
+    }
+
+    return game.results.map((result) =>
+      result.participantId === participant.id ? { ...result, score: result.score + score } : result,
+    );
   }
 
   private handleTimeout(message: PuzzleWsTimeoutMessage): void {
