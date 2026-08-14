@@ -114,8 +114,6 @@ export class GamesPage {
 
     const { theme, gridSize } = this.piecePuzzleForm.getRawValue();
 
-    if (this.userStateService.user() !== null) return undefined;
-
     const request: PuzzlesPostRequest = {
       theme,
       gridSize: Number(gridSize),
