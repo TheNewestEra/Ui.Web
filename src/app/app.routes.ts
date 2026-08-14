@@ -37,10 +37,6 @@ export const routes: Routes = [
         loadComponent: () => import('@core/pages/browse/browse').then((m) => m.BrowsePage),
       },
       {
-        path: 'dashboard',
-        loadComponent: () => import('@core/pages/dashboard/dashboard').then((m) => m.DashboardPage),
-      },
-      {
         path: 'friends',
         loadComponent: () => import('@core/pages/friends/friends').then((m) => m.FriendsPage),
       },
