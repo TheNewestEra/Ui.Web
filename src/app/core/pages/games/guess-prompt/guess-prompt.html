@@ -103,10 +103,9 @@
             <div class="flex flex-col gap-3 p-6 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 @if (hasJoined()) {
-                  <p class="flex items-center gap-2 font-medium text-success">
-                    <app-icon name="circle-check" class="size-5" />
+                  <app-success-alert [inline]="true" class="font-medium">
                     You have joined as a player
-                  </p>
+                  </app-success-alert>
                 } @else {
                   <p class="text-sm text-base-content/60">Join before the timer ends to play.</p>
                 }
@@ -415,32 +414,24 @@
                       </form>
 
                       @if (answeredCorrectly()) {
-                        <div class="rounded-box bg-success/10 p-4 text-success">
-                          <div class="flex items-center gap-3">
-                            <app-icon name="circle-check" class="size-5" />
-
-                            <div>
-                              <p class="font-semibold">Correct!</p>
-                              <p class="text-sm">
-                                You earned {{ guessResult()?.score ?? 0 }} points this round. Your
-                                total score is
-                                {{ guessResult()?.totalScore ?? currentPlayerScore() }}.
-                              </p>
-                              <p class="mt-1 text-sm">Waiting for the other players to finish.</p>
-                            </div>
+                        <app-success-alert>
+                          <div>
+                            <p class="font-semibold">Correct!</p>
+                            <p class="text-sm">
+                              You earned {{ guessResult()?.score ?? 0 }} points this round. Your
+                              total score is
+                              {{ guessResult()?.totalScore ?? currentPlayerScore() }}.
+                            </p>
+                            <p class="mt-1 text-sm">Waiting for the other players to finish.</p>
                           </div>
-                        </div>
+                        </app-success-alert>
                       } @else if (guessResult(); as result) {
-                        <div class="rounded-box bg-error/10 p-4 text-error">
-                          <div class="flex items-center gap-3">
-                            <app-icon name="circle-x" class="size-5" />
-
-                            <div>
-                              <p class="font-semibold">Not quite.</p>
-                              <p class="text-sm">Keep trying before the timer runs out.</p>
-                            </div>
+                        <app-error-alert>
+                          <div>
+                            <p class="font-semibold">Not quite.</p>
+                            <p class="text-sm">Keep trying before the timer runs out.</p>
                           </div>
-                        </div>
+                        </app-error-alert>
                       }
                     </div>
                   </app-card>

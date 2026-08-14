@@ -21,6 +21,7 @@ import { FormFieldComponent } from '@shared/components/form/form-field/form-fiel
 import { ErrorAlertComponent } from '@shared/components/alert/error/error';
 import { IconComponent } from '@shared/ui/icon/icon';
 import { FriendPersonRowComponent } from '@core/components/friend-person-row/friend-person-row';
+import { SuccessAlertComponent } from "@shared/components/alert/success/success";
 
 @Component({
   selector: 'app-friends',
@@ -36,7 +37,8 @@ import { FriendPersonRowComponent } from '@core/components/friend-person-row/fri
     ErrorAlertComponent,
     IconComponent,
     FriendPersonRowComponent,
-  ],
+    SuccessAlertComponent
+],
   templateUrl: './friends.html',
   styleUrl: './friends.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

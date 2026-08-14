@@ -10,11 +10,11 @@
   <div card-content class="flex flex-col gap-5">
     @if (usesRemoteData()) {
       <form [formGroup]="filterForm" class="grid gap-4 sm:grid-cols-3">
-        <app-form-field label="Game type" [control]="filterForm.controls.kind">
+        <app-form-field label="Game" [control]="filterForm.controls.kind">
           <app-select formControlName="kind" [options]="kindOptions" />
         </app-form-field>
 
-        <app-form-field label="Time period" [control]="filterForm.controls.period">
+        <app-form-field label="Time" [control]="filterForm.controls.period">
           <app-select formControlName="period" [options]="periodOptions" />
         </app-form-field>
 
@@ -24,9 +24,9 @@
       </form>
 
       @if (friendRequestError()) {
-        <p class="rounded-box bg-error/10 p-3 text-sm text-error">
+        <app-error-alert class="text-sm">
           {{ friendRequestError() }}
-        </p>
+        </app-error-alert>
       }
 
       @if (!isLoggedIn()) {
@@ -74,8 +74,8 @@
           </div>
         }
       } @else if (errorMessage()) {
-        <div class="flex flex-col items-center gap-3 p-8 text-center text-error">
-          <p>{{ errorMessage() }}</p>
+        <div class="flex flex-col items-center gap-3 p-8 text-center">
+          <app-error-alert>{{ errorMessage() }}</app-error-alert>
           <app-button size="sm" variant="ghost" (clicked)="loadLeaderboard()">Retry</app-button>
         </div>
       } @else {
@@ -84,8 +84,7 @@
             class="grid items-center gap-3 border-b border-base-300 px-4 py-4 last:border-b-0"
             [style.min-width]="usesRemoteData() ? '42rem' : null"
             [style.grid-template-columns]="tableColumns()"
-            [class.border-l-4]="isCurrent(entry)"
-            [class.border-l-primary]="isCurrent(entry)"
+            [style.box-shadow]="isCurrent(entry) ? 'inset 4px 0 0 var(--color-primary)' : null"
             [class.bg-primary/10]="isCurrent(entry)"
           >
             <span class="font-bold tabular-nums text-base-content/60">
@@ -112,14 +111,14 @@
                 [class.text-primary]="isSelf(entry)"
                 [class.text-success]="!isSelf(entry) && entry.isFriend"
               >
-                @if (isSelf(entry)) {
-                  You
-                } @else if (pendingFriendRequestIds().has(entry.id)) {
+                @if (pendingFriendRequestIds().has(entry.id)) {
                   Request sent
-                } @else if (entry.isFriend) {
+                } @else if (entry.isFriend == true) {
                   Friend
-                } @else {
+                } @else if (entry.isFriend == false) {
                   Not a friend
+                } @else {
+                  <span class="text-base-content/30">—</span>
                 }
               </span>
               <div>
@@ -152,9 +151,10 @@
                 Your position
               </p>
               <div
-                class="grid items-center gap-3 border-l-4 border-l-primary px-4 py-4"
+                class="grid items-center gap-3 px-4 py-4"
                 [style.min-width]="usesRemoteData() ? '42rem' : null"
                 [style.grid-template-columns]="tableColumns()"
+                style="box-shadow: inset 4px 0 0 var(--color-primary)"
               >
                 <span class="font-bold tabular-nums text-base-content/60">
                   {{ me.rank ?? '—' }}
