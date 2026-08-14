@@ -72,7 +72,7 @@ export class GuessPromptGameService {
   clearGameCredentials(gameId: string): void {
     this.clearParticipantCredentials(gameId);
     sessionStorage.removeItem(this.storageKey(LOCAL_STORAGE_KEYS.GUESS_HOST_TOKEN, gameId));
-    sessionStorage.removeItem(this.storageKey(LOCAL_STORAGE_KEYS.RATED_GAME_PREFIX, gameId));
+    sessionStorage.removeItem(this.storageKey(LOCAL_STORAGE_KEYS.GUESS_RATED_GAME, gameId));
   }
 
   private storageKey(baseKey: string, gameId: string): string {

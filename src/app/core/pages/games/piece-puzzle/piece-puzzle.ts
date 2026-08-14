@@ -911,7 +911,7 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
     sessionStorage.removeItem(this.storageKey(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_PARTICIPANT_ID));
     sessionStorage.removeItem(this.storageKey(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_TOKEN));
     sessionStorage.removeItem(this.storageKey(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_HOST_TOKEN));
-    sessionStorage.removeItem(this.storageKey(LOCAL_STORAGE_KEYS.RATED_GAME_PREFIX));
+    sessionStorage.removeItem(this.storageKey(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_RATED));
 
     this.participantId.set(null);
   }

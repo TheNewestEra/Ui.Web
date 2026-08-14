@@ -25,6 +25,7 @@ export class GameRatingComponent {
   private readonly browseService = inject(BrowseService);
   private readonly userState = inject(UserStateService);
 
+  readonly gameType = input.required<'puzzle' | 'guess'>();
   readonly gameId = input.required<string>();
   readonly heading = input('Rate this game');
   readonly subtitle = input('What did you think? Your rating helps others find great games.');
@@ -41,7 +42,7 @@ export class GameRatingComponent {
 
   constructor() {
     effect(() => {
-      const stored = localStorage.getItem(this.storageKey(this.gameId()));
+      const stored = localStorage.getItem(this.storageKey());
 
       this.submittedStars.set(stored ? Number(stored) : null);
       this.submitting.set(false);
@@ -64,7 +65,7 @@ export class GameRatingComponent {
         next: () => {
           this.submittedStars.set(stars);
 
-          localStorage.setItem(this.storageKey(gameId), `${stars}`);
+          localStorage.setItem(this.storageKey(), `${stars}`);
         },
         error: (error) => {
           this.errorMessage.set(error?.error?.error ?? 'Unable to submit your rating.');
@@ -72,7 +73,11 @@ export class GameRatingComponent {
       });
   }
 
-  private storageKey(gameId: string): string {
-    return `${LOCAL_STORAGE_KEYS.RATED_GAME_PREFIX}:${gameId}`;
+  private storageKey(): string {
+    const ratedPrefix =
+      this.gameType() == 'guess'
+        ? LOCAL_STORAGE_KEYS.GUESS_RATED_GAME
+        : LOCAL_STORAGE_KEYS.PIECE_PUZZLE_RATED;
+    return `${ratedPrefix}:${this.gameId()}`;
   }
 }
