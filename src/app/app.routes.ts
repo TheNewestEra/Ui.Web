@@ -1,11 +1,5 @@
 import { Routes } from '@angular/router';
-import { AccountPage } from '@core/pages/account/account';
-import { DashboardPage } from '@core/pages/dashboard/dashboard';
 import { GamesPage } from '@core/pages/games/games';
-import { GuessPromptGamePage } from '@core/pages/games/guess-prompt/guess-prompt';
-import { PiecePuzzleGamePage } from '@core/pages/games/piece-puzzle/piece-puzzle';
-import { LeaderboardPage } from '@core/pages/leaderboard/leaderboard';
-import { FriendsPage } from '@core/pages/friends/friends';
 
 export const routes: Routes = [
   {
@@ -20,15 +14,21 @@ export const routes: Routes = [
         children: [
           {
             path: '',
-            component: GamesPage,
+            loadComponent: () => import('@core/pages/games/games').then((m) => m.GamesPage),
           },
           {
             path: 'piece-puzzle/:gameId',
-            component: PiecePuzzleGamePage,
+            loadComponent: () =>
+              import('@core/pages/games/piece-puzzle/piece-puzzle').then(
+                (m) => m.PiecePuzzleGamePage,
+              ),
           },
           {
             path: 'guess-prompt/:gameId',
-            component: GuessPromptGamePage,
+            loadComponent: () =>
+              import('@core/pages/games/guess-prompt/guess-prompt').then(
+                (m) => m.GuessPromptGamePage,
+              ),
           },
         ],
       },
@@ -37,20 +37,17 @@ export const routes: Routes = [
         loadComponent: () => import('@core/pages/browse/browse').then((m) => m.BrowsePage),
       },
       {
-        path: 'dashboard',
-        component: DashboardPage,
-      },
-      {
         path: 'friends',
-        component: FriendsPage,
+        loadComponent: () => import('@core/pages/friends/friends').then((m) => m.FriendsPage),
       },
       {
         path: 'account',
-        component: AccountPage,
+        loadComponent: () => import('@core/pages/account/account').then((m) => m.AccountPage),
       },
       {
         path: 'leaderboard',
-        component: LeaderboardPage,
+        loadComponent: () =>
+          import('@core/pages/leaderboard/leaderboard').then((m) => m.LeaderboardPage),
       },
     ],
   },
