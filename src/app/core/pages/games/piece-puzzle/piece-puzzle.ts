@@ -516,9 +516,7 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
       new Map(message.selections.map((s) => [s.cell, { player: s.player, color: s.color }])),
     );
 
-    const myParticipantId = sessionStorage.getItem(
-      this.storageKey(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_PARTICIPANT_ID),
-    );
+    const myParticipantId = this.participantId();
     this.selectedTile.set(
       message.selections.find((s) => s.participantId === myParticipantId)?.cell ?? null,
     );
@@ -869,9 +867,7 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
       type: PuzzleWsMoveRequestTypeEnum.Move,
       cellA,
       cellB,
-      participantId:
-        sessionStorage.getItem(this.storageKey(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_PARTICIPANT_ID)) ??
-        '',
+      participantId: this.participantId() ?? '',
       token:
         sessionStorage.getItem(this.storageKey(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_TOKEN)) ?? undefined,
     });
@@ -883,9 +879,7 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
     this.puzzleSocket.send({
       type: PuzzleWsSelectRequestTypeEnum.Select,
       cell,
-      participantId:
-        sessionStorage.getItem(this.storageKey(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_PARTICIPANT_ID)) ??
-        '',
+      participantId: this.participantId() ?? '',
       token:
         sessionStorage.getItem(this.storageKey(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_TOKEN)) ?? undefined,
     });
@@ -900,9 +894,7 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
 
     this.puzzleSocket.send({
       type: PuzzleWsDeselectRequestTypeEnum.Deselect,
-      participantId:
-        sessionStorage.getItem(this.storageKey(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_PARTICIPANT_ID)) ??
-        '',
+      participantId: this.participantId() ?? '',
       token:
         sessionStorage.getItem(this.storageKey(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_TOKEN)) ?? undefined,
     });
@@ -910,7 +902,8 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
 
   private refreshPlayerIdentity(): void {
     this.participantId.set(
-      sessionStorage.getItem(this.storageKey(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_PARTICIPANT_ID)),
+      this.userState.user()?.id ??
+        sessionStorage.getItem(this.storageKey(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_PARTICIPANT_ID)),
     );
   }
 

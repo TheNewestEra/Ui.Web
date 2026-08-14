@@ -3,7 +3,7 @@ import { Router } from '@angular/router';
 import { InvitesService } from '@thenewestera/friends-ng';
 import { PushableNotification } from '@core/models/notification.model';
 import { ToastService } from '@shared/services/toast.service';
-import { NotificationsService } from './notifications.service';
+import { NotificationsService } from '@core/services/notifications.service';
 
 @Injectable({
   providedIn: 'root',
@@ -15,14 +15,18 @@ export class InviteResponseService {
   private readonly router = inject(Router);
 
   accept(notification: PushableNotification): void {
-    this.clear(notification);
-
     this.invitesService.apiInvitesIdAcceptPost(notification.id).subscribe({
       next: ({ playUrl }) => {
-        if (/^https?:\/\//.test(playUrl)) window.location.assign(playUrl);
-        else void this.router.navigateByUrl(playUrl);
+        this.clear(notification);
+        void this.navigateToGame(playUrl);
       },
-      error: () => undefined,
+      error: (error) => {
+        this.toastService.show({
+          id: `invite-accept-error-${notification.id}`,
+          title: 'Unable to accept invite',
+          body: error?.error?.error ?? 'Please try again.',
+        });
+      },
     });
   }
 
@@ -36,5 +40,24 @@ export class InviteResponseService {
   private clear(notification: PushableNotification): void {
     this.toastService.dismiss(notification.id);
     this.notificationsService.dismiss(notification);
+  }
+
+  private async navigateToGame(playUrl: string): Promise<void> {
+    const url = new URL(playUrl, window.location.origin);
+    const routeUrl = `${url.pathname}${url.search}${url.hash}`;
+
+    if (url.pathname.startsWith('/games/')) {
+      const navigated = await this.router.navigateByUrl(routeUrl);
+      if (!navigated) window.location.assign(routeUrl);
+      return;
+    }
+
+    if (url.origin === window.location.origin) {
+      const navigated = await this.router.navigateByUrl(routeUrl);
+      if (!navigated) window.location.assign(routeUrl);
+      return;
+    }
+
+    window.location.assign(url.href);
   }
 }

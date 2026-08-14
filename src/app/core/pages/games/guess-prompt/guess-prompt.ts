@@ -185,7 +185,11 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
   });
 
   readonly hasJoined = computed(() => {
-    return !!this.participantId();
+    const participantId = this.participantId();
+    return (
+      !!participantId &&
+      !!this.game()?.participants.some((participant) => participant.id === participantId)
+    );
   });
 
   readonly isSpectator = computed(() => {
@@ -1020,8 +1024,7 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
     this.guessPromptSocket.send({
       type: GameWsGuessRequestTypeEnum.Guess,
       index: this.currentRound() ?? 0,
-      participantId:
-        sessionStorage.getItem(this.storageKey(LOCAL_STORAGE_KEYS.GUESS_PARTICIPANT_ID)) ?? '',
+      participantId: this.participantId() ?? '',
       token: sessionStorage.getItem(this.storageKey(LOCAL_STORAGE_KEYS.GUESS_TOKEN)) ?? undefined,
       guess,
     });
@@ -1151,7 +1154,8 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
 
   private refreshPlayerIdentity(gameId: string): void {
     this.participantId.set(
-      sessionStorage.getItem(`${LOCAL_STORAGE_KEYS.GUESS_PARTICIPANT_ID}:${gameId}`),
+      this.userState.user()?.id ??
+        sessionStorage.getItem(`${LOCAL_STORAGE_KEYS.GUESS_PARTICIPANT_ID}:${gameId}`),
     );
   }
 
