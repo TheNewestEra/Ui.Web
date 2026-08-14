@@ -29,6 +29,7 @@ import {
   GuessResult,
   GuessThePromptService,
   RoundStatus,
+  WsPlayerJoinedMessage,
   WsPlayerJoinedMessageTypeEnum,
   WsPresenceMessage,
   WsPresenceMessageTypeEnum,
@@ -385,8 +386,11 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
 
       case GameWsPromptsReadyMessageTypeEnum.PromptsReady:
       case GameWsRevealedMessageTypeEnum.Revealed:
-      case WsPlayerJoinedMessageTypeEnum.PlayerJoined:
       case GameWsPlayerTypingMessageTypeEnum.PlayerTyping:
+        break;
+
+      case WsPlayerJoinedMessageTypeEnum.PlayerJoined:
+        this.handlePlayerJoined(message);
         break;
 
       case GameWsGuessMessageTypeEnum.Guess:
@@ -553,6 +557,45 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
       return {
         ...game,
         connectedPlayers: message.connectedPlayers,
+      };
+    });
+  }
+
+  private handlePlayerJoined(message: WsPlayerJoinedMessage): void {
+    this.game.update((game) => {
+      if (!game) return game;
+
+      const existingIndex = game.participants.findIndex(
+        (participant) =>
+          (!!message.participantId && participant.id === message.participantId) ||
+          participant.name === message.name,
+      );
+
+      if (existingIndex >= 0) {
+        const existing = game.participants[existingIndex];
+        if (existing.color === message.color && (!message.participantId || existing.id === message.participantId)) {
+          return game;
+        }
+
+        const participants = [...game.participants];
+        participants[existingIndex] = {
+          ...existing,
+          id: message.participantId ?? existing.id,
+          color: message.color,
+        };
+        return { ...game, participants };
+      }
+
+      return {
+        ...game,
+        participants: [
+          ...game.participants,
+          {
+            id: message.participantId ?? `player:${message.name}`,
+            name: message.name,
+            color: message.color,
+          },
+        ],
       };
     });
   }
