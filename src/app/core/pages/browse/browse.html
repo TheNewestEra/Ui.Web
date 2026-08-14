@@ -9,18 +9,22 @@
       <div card-title>Game catalog</div>
       <div card-subtitle>Filter and sort games created by the community.</div>
 
-      <form card-content [formGroup]="filterForm" class="flex flex-wrap gap-4">
-        <div class="w-full sm:w-56">
-          <app-form-field label="Game type" [control]="filterForm.controls.kind">
-            <app-select formControlName="kind" [options]="kindOptions" />
-          </app-form-field>
-        </div>
+      <form card-content [formGroup]="filterForm" class="grid gap-4 sm:grid-cols-4">
+        <app-form-field label="Game type" [control]="filterForm.controls.kind">
+          <app-select formControlName="kind" [options]="kindOptions" />
+        </app-form-field>
 
-        <div class="w-full sm:w-56">
-          <app-form-field label="Sort by" [control]="filterForm.controls.sort">
-            <app-select formControlName="sort" [options]="sortOptions" />
-          </app-form-field>
-        </div>
+        <app-form-field label="Sort by" [control]="filterForm.controls.sort">
+          <app-select formControlName="sort" [options]="sortOptions" />
+        </app-form-field>
+
+        <app-form-field label="Game status" [control]="filterForm.controls.playStatus">
+          <app-select formControlName="playStatus" [options]="statusOptions" />
+        </app-form-field>
+
+        <app-form-field label="Results" [control]="filterForm.controls.limit">
+          <app-select formControlName="limit" [options]="pageSizeOptions" />
+        </app-form-field>
       </form>
     </app-card>
 
@@ -42,13 +46,9 @@
           <app-card [compact]="true">
             <div card-image class="skeleton h-40 w-full rounded-none"></div>
 
-            <div card-title>
-              <div class="skeleton h-6 w-3/4"></div>
-            </div>
+            <div card-title class="skeleton h-6 w-40 max-w-full"></div>
 
-            <div card-subtitle>
-              <div class="skeleton h-4 w-1/2"></div>
-            </div>
+            <div card-subtitle class="skeleton h-4 w-28 max-w-full"></div>
 
             <div card-content class="flex flex-col gap-4">
               <div class="skeleton h-5 w-2/3"></div>

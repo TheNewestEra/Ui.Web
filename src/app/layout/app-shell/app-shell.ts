@@ -13,19 +13,9 @@ import { ToastContainerComponent } from '@shared/components/toast/toast';
 export class AppShellComponent {
   menuItems: SidebarItem[] = [
     {
-      // Welcome user
-      // leaderboard...
-      // last game I played
-      // if I didnt finish a game...
-      label: 'Dashboard',
-      icon: 'layout-dashboard',
-      route: '/',
-      requiresAuth: true,
-    },
-    {
       label: 'Games',
       icon: 'gamepad-2',
-      route: '/games',
+      route: '/',
     },
     {
       label: 'Browse',
