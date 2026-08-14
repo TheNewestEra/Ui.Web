@@ -10,11 +10,11 @@
   <div card-content class="flex flex-col gap-5">
     @if (usesRemoteData()) {
       <form [formGroup]="filterForm" class="grid gap-4 sm:grid-cols-3">
-        <app-form-field label="Game type" [control]="filterForm.controls.kind">
+        <app-form-field label="Game" [control]="filterForm.controls.kind">
           <app-select formControlName="kind" [options]="kindOptions" />
         </app-form-field>
 
-        <app-form-field label="Time period" [control]="filterForm.controls.period">
+        <app-form-field label="Time" [control]="filterForm.controls.period">
           <app-select formControlName="period" [options]="periodOptions" />
         </app-form-field>
 
@@ -116,10 +116,12 @@
                   You
                 } @else if (pendingFriendRequestIds().has(entry.id)) {
                   Request sent
-                } @else if (entry.isFriend) {
+                } @else if (entry.isFriend == true) {
                   Friend
-                } @else {
+                } @else if (entry.isFriend == false) {
                   Not a friend
+                } @else {
+                  <span class="text-base-content/30">—</span>
                 }
               </span>
               <div>
