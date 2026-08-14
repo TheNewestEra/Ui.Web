@@ -2,9 +2,9 @@ import { inject, Injectable } from '@angular/core';
 import { Router } from '@angular/router';
 import {
   PiecePuzzleService,
+  PuzzlesIdRegeneratePostRequest,
   PuzzlesPost202Response,
   PuzzlesPostRequest,
-  ReplayResult,
 } from '@thenewestera/puzzle-ng';
 import { LOCAL_STORAGE_KEYS } from '@core/constants/local-storage-keys.constants';
 import { UserStateService } from './user-state.service';
@@ -32,17 +32,17 @@ export class PiecePuzzleGameService {
     );
   }
 
-  replay(gameId: string): Observable<ReplayResult> {
-    return this.api.puzzlesIdReplayPost(gameId).pipe(
+  replay(gameId: string): Observable<void> {
+    const request: PuzzlesIdRegeneratePostRequest = {
+      player: this.userState.isLoggedIn() ? undefined : this.userState.displayName(),
+      color: this.userState.isLoggedIn() ? undefined : (this.userState.color() ?? undefined),
+    };
+
+    return this.api.puzzlesIdReplayPost(gameId, request).pipe(
       tap(() => this.clear(gameId)),
-      tap((response) =>
-        this.storage.set(
-          LOCAL_STORAGE_KEYS.PIECE_PUZZLE_HOST_TOKEN,
-          response.puzzleId,
-          response.hostToken,
-        ),
-      ),
+      tap((response) => this.storeHost(response)),
       tap((response) => void this.router.navigate(['/games/piece-puzzle', response.puzzleId])),
+      map(() => undefined),
     );
   }
 
@@ -63,15 +63,21 @@ export class PiecePuzzleGameService {
       LOCAL_STORAGE_KEYS.PIECE_PUZZLE_HOST_TOKEN,
       LOCAL_STORAGE_KEYS.PIECE_PUZZLE_RATED,
       LOCAL_STORAGE_KEYS.PIECE_PUZZLE_EXPIRES_AT,
-    ]) this.storage.remove(key, gameId);
+    ])
+      this.storage.remove(key, gameId);
   }
 
   clearIfExpired(gameId: string): void {
-    if (this.storage.isExpired(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_EXPIRES_AT, gameId)) this.clear(gameId);
+    if (this.storage.isExpired(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_EXPIRES_AT, gameId))
+      this.clear(gameId);
   }
 
   private storeHost(response: PuzzlesPost202Response): void {
-    this.storage.set(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_HOST_TOKEN, response.puzzleId, response.hostToken);
+    this.storage.set(
+      LOCAL_STORAGE_KEYS.PIECE_PUZZLE_HOST_TOKEN,
+      response.puzzleId,
+      response.hostToken,
+    );
     this.storeParticipant(response.puzzleId, response.participantId, response.token);
   }
 }

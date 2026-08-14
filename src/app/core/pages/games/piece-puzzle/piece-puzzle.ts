@@ -24,6 +24,7 @@ import {
   PuzzleWsTileDeselectedMessageTypeEnum,
   PuzzleWsTileSelectedMessage,
   PuzzleWsTileSelectedMessageTypeEnum,
+  PuzzleWsTimeoutMessage,
   PuzzleWsTimeoutMessageTypeEnum,
   WsPresenceMessage,
   WsPresenceMessageTypeEnum,
@@ -179,20 +180,19 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
   readonly leaderboardEntries = computed<LeaderboardDisplayEntry[]>(() => {
     const game = this.game();
 
-    // TODO: BE to give scores to each player, not just the player who solved it
-    if (!game?.solvedBy || game.score == null) return [];
+    if (!game?.results.length) return [];
 
-    const solver = game.participants.find((participant) => participant.name === game.solvedBy);
+    return game.results.map((result, index) => {
+      const participant = game.participants.find(({ id }) => id === result.participantId);
 
-    return [
-      {
-        id: game.solvedBy,
-        name: game.solvedBy,
-        color: solver?.color ?? '#000000',
-        score: game.score,
-        rank: 1,
-      },
-    ];
+      return {
+        id: result.participantId,
+        name: participant?.name ?? 'Unknown player',
+        color: participant?.color ?? '#000000',
+        score: result.score,
+        rank: index + 1,
+      };
+    });
   });
 
   readonly currentParticipant = computed(() => {
@@ -203,12 +203,6 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
   });
 
   readonly participantColor = computed(() => this.currentParticipant()?.color ?? null);
-
-  readonly currentLeaderboardId = computed(() => {
-    const solver = this.game()?.solvedBy;
-
-    return solver === this.userState.displayName() ? solver : null;
-  });
 
   constructor() {
     this.game$.subscribe((game) => {
@@ -471,7 +465,7 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
         break;
 
       case PuzzleWsTimeoutMessageTypeEnum.Timeout:
-        this.handleTimeout();
+        this.handleTimeout(message);
         break;
 
       case WsPresenceMessageTypeEnum.Presence:
@@ -523,6 +517,7 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
     this.game.set({
       id: message.id,
       theme: message.theme ?? '',
+      themeGenerated: message.themeGenerated,
       prompt: message.prompt ?? '',
       status: message.status,
       error: message.error ?? '',
@@ -533,11 +528,11 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
       remainingMs: message.remainingMs ?? 0,
       lobbyRemainingMs: message.lobbyRemainingMs ?? 0,
       endedAt: message.endedAt ?? 0,
-      score: message.score ?? 0,
       solvedBy: message.solvedBy ?? '',
       connectedPlayers: message.connectedPlayers,
       participants: message.participants,
       selections: message.selections,
+      results: message.results,
     });
     this.loading.set(false);
     this.errorMessage.set(null);
@@ -592,9 +587,9 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
         ...game,
         board: message.board,
         status: PuzzleStatus.Solved,
-        score: message.score,
         solvedBy: message.solvedBy,
         remainingMs: message.remainingMs,
+        results: message.results,
       };
     });
 
@@ -607,7 +602,7 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
     this.clearParticipantCredentials(false);
   }
 
-  private handleTimeout(): void {
+  private handleTimeout(message: PuzzleWsTimeoutMessage): void {
     this.game.update((game) => {
       if (!game) return game;
 
@@ -615,7 +610,7 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
         ...game,
         status: PuzzleStatus.Timeout,
         remainingMs: 0,
-        score: 0,
+        results: message.results,
       };
     });
 
