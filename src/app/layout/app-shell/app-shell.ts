@@ -2,10 +2,11 @@ import { Component, signal } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { SidebarComponent, SidebarItem } from '@layout/sidebar/sidebar';
 import { NavbarComponent } from '@layout/navbar/navbar';
+import { ToastContainerComponent } from '@shared/components/toast/toast';
 
 @Component({
   selector: 'app-app-shell',
-  imports: [SidebarComponent, RouterOutlet, NavbarComponent],
+  imports: [SidebarComponent, RouterOutlet, NavbarComponent, ToastContainerComponent],
   templateUrl: './app-shell.html',
   styleUrl: './app-shell.css',
 })

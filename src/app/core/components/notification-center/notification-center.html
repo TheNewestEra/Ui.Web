@@ -1,0 +1,63 @@
+@if (userState.isLoggedIn()) {
+  <div class="dropdown dropdown-end">
+    <div class="indicator">
+      @if (notificationsService.count() > 0) {
+        <span class="indicator-item status status-error"></span>
+      }
+
+      <app-button variant="ghost" size="sm" [iconOnly]="true" leftIcon="bell"/>
+    </div>
+
+    <div
+      tabindex="0"
+      class="dropdown-content z-10 mt-3 max-h-96 w-80 overflow-y-auto rounded-box border border-base-300 bg-base-100 p-3 shadow-xl"
+    >
+      <p class="px-1 pb-2 font-semibold">Notifications</p>
+
+      <div class="flex flex-col gap-2">
+        @for (notification of notificationsService.notifications(); track notification.id) {
+          <div class="rounded-box bg-base-200 p-3">
+            <p class="font-medium">{{ title(notification) }}</p>
+
+            @if (body(notification); as notificationBody) {
+              <p class="text-sm text-base-content/70">{{ notificationBody }}</p>
+            }
+
+            @if (isFriendRequest(notification)) {
+              <div class="mt-2 flex gap-2">
+                <app-button
+                  size="sm"
+                  [loading]="isActionLoading(notification)"
+                  (clicked)="acceptFriendRequest(notification)"
+                >
+                  Accept
+                </app-button>
+                <app-button
+                  size="sm"
+                  variant="ghost"
+                  [loading]="isActionLoading(notification)"
+                  (clicked)="declineFriendRequest(notification)"
+                >
+                  Decline
+                </app-button>
+              </div>
+            } @else if (isInvite(notification)) {
+              <div class="mt-2 flex gap-2">
+                <app-button size="sm" (clicked)="acceptInvite(notification)">Accept</app-button>
+                <app-button size="sm" variant="ghost" (clicked)="declineInvite(notification)">Decline</app-button>
+              </div>
+            } @else {
+              <div class="mt-2 flex justify-end">
+                <app-button size="sm" variant="ghost" (clicked)="dismiss(notification)">Dismiss</app-button>
+              </div>
+            }
+          </div>
+        } @empty {
+          <p class="rounded-box bg-base-200 p-4 text-center text-sm text-base-content/60">
+            You're all caught up.
+          </p>
+        }
+      </div>
+    </div>
+  </div>
+}

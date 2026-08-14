@@ -12,6 +12,7 @@ import { provideApi as provideGuessApi } from '@thenewestera/guess-ng';
 import { provideApi as providePuzzleApi } from '@thenewestera/puzzle-ng';
 import { provideApi as provideBrowseApi } from '@thenewestera/browse-ng';
 import { provideApi as provideFriendsApi } from '@thenewestera/friends-ng';
+import { provideApi as provideNotificationsApi } from '@thenewestera/notifications-ng';
 import { BASE_URL } from '@core/constants/base-urls.constants';
 
 export const appConfig: ApplicationConfig = {
@@ -43,6 +44,10 @@ export const appConfig: ApplicationConfig = {
     provideFriendsApi({
       withCredentials: true,
       basePath: BASE_URL.FRIENDS,
+    }),
+    provideNotificationsApi({
+      withCredentials: true,
+      basePath: BASE_URL.NOTIFICATIONS,
     }),
   ],
 };
