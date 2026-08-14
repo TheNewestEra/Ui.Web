@@ -7,6 +7,7 @@ import {
   ApiCatalogGet200Response,
   BrowseService,
   CatalogEntry,
+  CatalogScope,
   CatalogSort,
   PlayStatus,
 } from '@thenewestera/browse-ng';
@@ -18,6 +19,7 @@ import { IconComponent } from '@shared/ui/icon/icon';
 import { FormFieldComponent } from '@shared/components/form/form-field/form-field';
 import { SelectComponent, SelectOption } from '@shared/components/form/select/select';
 import { ErrorAlertComponent } from '@shared/components/alert/error/error';
+import { UserStateService } from '@core/services/user-state.service';
 
 @Component({
   selector: 'app-browse',
@@ -40,6 +42,7 @@ export class BrowsePage {
   private readonly browseService = inject(BrowseService);
   private readonly fb = inject(FormBuilder);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly userState = inject(UserStateService);
 
   readonly kindOptions: SelectOption[] = [
     { label: 'All game types', value: 'all' },
@@ -59,18 +62,21 @@ export class BrowsePage {
     { label: 'Finished', value: PlayStatus.Finished },
   ];
 
-  readonly pageSizeOptions: SelectOption[] = [
-    { label: '12 per page', value: '12' },
-    { label: '24 per page', value: '24' },
-    { label: '48 per page', value: '48' },
-    { label: '60 per page', value: '60' },
-  ];
+  readonly scopeOptions = computed<SelectOption[]>(() => [
+    { label: 'Everyone', value: CatalogScope.All },
+    {
+      label: this.userState.isLoggedIn() ? 'Friends' : 'Friends (log in required)',
+      value: CatalogScope.Friends,
+      disabled: !this.userState.isLoggedIn(),
+    },
+  ]);
 
   readonly filterForm = this.fb.nonNullable.group({
     kind: ['all'],
     sort: [CatalogSort.Recent],
     playStatus: ['all'],
-    limit: ['12'],
+    scope: [CatalogScope.All],
+    limit: ['24'],
   });
 
   readonly loading = signal(false);
@@ -97,7 +103,15 @@ export class BrowsePage {
   load(): void {
     if (this.loading()) return;
 
-    const { kind, sort, playStatus, limit } = this.filterForm.getRawValue();
+    const { kind, sort, playStatus, scope: selectedScope, limit } = this.filterForm.getRawValue();
+    const scope =
+      selectedScope === CatalogScope.Friends && !this.userState.isLoggedIn()
+        ? CatalogScope.All
+        : selectedScope;
+
+    if (scope !== selectedScope) {
+      this.filterForm.controls.scope.setValue(scope, { emitEvent: false });
+    }
 
     this.loading.set(true);
     this.errorMessage.set(null);
@@ -108,6 +122,7 @@ export class BrowsePage {
         kind === 'all' ? undefined : (kind as 'guess' | 'puzzle'),
         sort as CatalogSort,
         playStatus === 'all' ? undefined : (playStatus as PlayStatus),
+        scope,
         Number(limit),
         this.offset(),
       )

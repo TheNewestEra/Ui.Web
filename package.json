@@ -32,7 +32,7 @@
     "@angular/router": "^20.2.0",
     "@tailwindcss/postcss": "^4.3.3",
     "@thenewestera/accounts-ng": "^1.0.4",
-    "@thenewestera/browse-ng": "^1.0.7",
+    "@thenewestera/browse-ng": "^1.0.8",
     "@thenewestera/friends-ng": "^1.0.5",
     "@thenewestera/guess-ng": "^1.0.19",
     "@thenewestera/leaderboard-ng": "^1.0.6",
