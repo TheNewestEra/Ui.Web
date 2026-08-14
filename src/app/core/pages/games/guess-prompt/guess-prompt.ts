@@ -1,6 +1,6 @@
-import { Component, DestroyRef, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
+import { Component, DestroyRef, computed, inject, OnDestroy, OnInit, signal, WritableSignal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
-import { interval, Subscription, map, filter, distinctUntilChanged, finalize } from 'rxjs';
+import { interval, Subscription, map, filter, distinctUntilChanged, finalize, Observable } from 'rxjs';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import {
   Game,
@@ -108,6 +108,7 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
   readonly submitting = signal(false);
   readonly joining = signal(false);
   readonly replaying = signal(false);
+  readonly regenerating = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly shareMessage = signal<string | null>(null);
   readonly inviteMessage = signal<string | null>(null);
@@ -489,6 +490,7 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
       connectedPlayers: message.connectedPlayers ?? 0,
       participants: message.participants ?? [],
       results: message.results ?? [],
+      themeGenerated: message.themeGenerated ?? false,
     };
 
     this.game.set(game);
@@ -927,22 +929,41 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
       });
   }
 
-  replayGame(): void {
+  private executeGameResetAction(
+    actionFn: (id: string) => Observable<void>,
+    loadingSignal: WritableSignal<boolean>,
+    defaultErrorMessage: string,
+  ): void {
     const gameId = this.gameId();
 
-    if (!gameId || this.replaying()) return;
+    if (!gameId || loadingSignal()) return;
 
-    this.replaying.set(true);
+    loadingSignal.set(true);
     this.errorMessage.set(null);
 
-    this.guessPromptGameService
-      .replay(gameId)
-      .pipe(finalize(() => this.replaying.set(false)))
+    actionFn(gameId)
+      .pipe(finalize(() => loadingSignal.set(false)))
       .subscribe({
         error: (error) => {
-          this.errorMessage.set(error?.error?.error ?? 'Unable to replay the game.');
+          this.errorMessage.set(error?.error?.error ?? defaultErrorMessage);
         },
       });
+  }
+
+  replayGame(): void {
+    this.executeGameResetAction(
+      (id) => this.guessPromptGameService.replay(id),
+      this.replaying,
+      'Unable to replay the game.',
+    );
+  }
+
+  regenerateGame(): void {
+    this.executeGameResetAction(
+      (id) => this.guessPromptGameService.regenerate(id),
+      this.regenerating,
+      'Unable to regenerate the game.',
+    );
   }
 
   private startLobbyCountdown(remainingMs: number): void {
@@ -1142,6 +1163,7 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
     this.submitting.set(false);
     this.joining.set(false);
     this.replaying.set(false);
+    this.regenerating.set(false);
     this.guessResult.set(null);
     this.answeredCorrectly.set(false);
     this.clearLiveGuesses();
