@@ -11,19 +11,19 @@
 
       <form card-content [formGroup]="filterForm" class="grid gap-4 sm:grid-cols-4">
         <app-form-field label="Game type" [control]="filterForm.controls.kind">
-          <app-select formControlName="kind" [options]="kindOptions" />
+          <app-select formControlName="kind" [options]="kindOptions"/>
         </app-form-field>
 
         <app-form-field label="Sort by" [control]="filterForm.controls.sort">
-          <app-select formControlName="sort" [options]="sortOptions" />
+          <app-select formControlName="sort" [options]="sortOptions"/>
         </app-form-field>
 
         <app-form-field label="Game status" [control]="filterForm.controls.playStatus">
-          <app-select formControlName="playStatus" [options]="statusOptions" />
+          <app-select formControlName="playStatus" [options]="statusOptions"/>
         </app-form-field>
 
         <app-form-field label="Results" [control]="filterForm.controls.limit">
-          <app-select formControlName="limit" [options]="pageSizeOptions" />
+          <app-select formControlName="limit" [options]="pageSizeOptions"/>
         </app-form-field>
       </form>
     </app-card>
@@ -60,7 +60,7 @@
       </div>
     } @else if (entries().length === 0) {
       <div class="flex flex-col items-center gap-3 p-16 text-base-content/60">
-        <app-icon name="inbox" />
+        <app-icon name="inbox"/>
 
         <p>No games found. Try a different filter.</p>
       </div>
@@ -87,7 +87,7 @@
                   (error)="onImageLoad(entry.id)"
                 />
               } @else {
-                <app-icon name="image-off" />
+                <app-icon name="image-off"/>
               }
             </div>
 
@@ -96,7 +96,7 @@
             </div>
 
             <p card-subtitle class="flex items-center gap-1.5">
-              <app-icon [name]="kindIcon(entry.kind)" />
+              <app-icon [name]="kindIcon(entry.kind)"/>
               {{ kindLabel(entry.kind) }}
             </p>
 
@@ -112,13 +112,11 @@
                   />
 
                   @for (star of [1, 2, 3, 4, 5]; track star) {
-                    <input
-                      type="radio"
-                      [name]="'rating-' + entry.id"
+                    <div
                       class="mask mask-star-2 bg-warning"
-                      disabled
-                      [checked]="star === filledStars(entry)"
-                    />
+                      [aria-label]="'rating-' + entry.id"
+                      [aria-current]="star === filledStars(entry)"
+                    ></div>
                   }
                 </div>
 

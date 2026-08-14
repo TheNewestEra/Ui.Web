@@ -235,6 +235,10 @@
               </div>
             </div>
 
+            @if (hasJoined()) {
+              <app-game-rating [gameId]="game.id" />
+            }
+
             <app-leaderboard
               class="w-full"
               [entries]="leaderboardEntries()"

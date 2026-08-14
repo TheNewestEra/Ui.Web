@@ -54,6 +54,7 @@ import {
   LeaderboardComponent,
   LeaderboardDisplayEntry,
 } from '@core/components/leaderboard/leaderboard';
+import { GameRatingComponent } from '@core/components/game-rating/game-rating';
 
 @Component({
   selector: 'app-piece-puzzle',
@@ -66,6 +67,7 @@ import {
     ReactiveFormsModule,
     KeyValuePipe,
     LeaderboardComponent,
+    GameRatingComponent,
   ],
   templateUrl: './piece-puzzle.html',
   styleUrl: './piece-puzzle.css',
@@ -683,7 +685,6 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
       this.pendingMove = null;
       this.moving.set(false);
     }
-
   }
 
   private handleTileSelected(message: PuzzleWsTileSelectedMessage): void {
@@ -759,7 +760,6 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
         ],
       };
     });
-
   }
 
   private handleStatus(message: WsStatusMessage): void {
