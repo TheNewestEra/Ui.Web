@@ -14,4 +14,7 @@ export const LOCAL_STORAGE_KEYS = {
   GUESS_TOKEN: 'guessToken',
   GUESS_HOST_TOKEN: 'guessHostToken',
   GUESS_ANSWERED_ROUND: 'guessAnsweredRound',
+
+  // Ratings (post-session, keyed per gameId via `${RATED_GAME_PREFIX}:${gameId}`)
+  RATED_GAME_PREFIX: 'ratedGame',
 };
