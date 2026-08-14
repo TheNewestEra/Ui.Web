@@ -7,18 +7,10 @@ import { finalize } from 'rxjs';
 import { FormFieldComponent } from '@shared/components/form/form-field/form-field';
 import { ButtonComponent } from '@shared/components/button/button';
 import { InputComponent } from '@shared/components/form/input/input';
-import {
-  JoinResult as PuzzleJoinResult,
-  PiecePuzzleService,
-  PuzzlesPost202Response,
-  PuzzlesPostRequest,
-} from '@thenewestera/puzzle-ng';
 import { SelectComponent, SelectOption } from '@shared/components/form/select/select';
-import { Router } from '@angular/router';
 import { ErrorAlertComponent } from '@shared/components/alert/error/error';
-import { LOCAL_STORAGE_KEYS } from '@core/constants/local-storage-keys.constants';
-import { UserStateService } from '@core/services/user-state.service';
 import { GuessPromptGameService } from '@core/services/guess-prompt-game.service';
+import { PiecePuzzleGameService } from '@core/services/piece-puzzle-game.service';
 
 @Component({
   selector: 'app-games',
@@ -37,10 +29,8 @@ import { GuessPromptGameService } from '@core/services/guess-prompt-game.service
   styleUrl: './games.css',
 })
 export class GamesPage {
-  private readonly router = inject(Router);
   private readonly guessPromptGameService = inject(GuessPromptGameService);
-  private readonly piecePuzzleService = inject(PiecePuzzleService);
-  private readonly userStateService = inject(UserStateService);
+  private readonly piecePuzzleGameService = inject(PiecePuzzleGameService);
   private readonly fb = inject(FormBuilder);
 
   readonly gridSizes: SelectOption[] = [
@@ -114,48 +104,17 @@ export class GamesPage {
 
     const { theme, gridSize } = this.piecePuzzleForm.getRawValue();
 
-    const request: PuzzlesPostRequest = {
-      theme,
-      gridSize: Number(gridSize),
-      player:
-        this.userStateService.user() !== null ? undefined : this.userStateService.displayName(),
-      color:
-        this.userStateService.user() !== null
-          ? undefined
-          : (this.userStateService.color() ?? undefined),
-    };
-
     this.piecePuzzleLoading.set(true);
     this.piecePuzzleErrorMessage.set(null);
 
-    this.piecePuzzleService
-      .puzzlesPost(request)
+    this.piecePuzzleGameService
+      .create(theme, Number(gridSize))
       .pipe(
         finalize(() => {
           this.piecePuzzleLoading.set(false);
         }),
       )
       .subscribe({
-        next: (response: PuzzlesPost202Response) => {
-          // Storing game details
-          sessionStorage.setItem(
-            `${LOCAL_STORAGE_KEYS.PIECE_PUZZLE_HOST_TOKEN}:${response.puzzleId}`,
-            response.hostToken,
-          );
-
-          // storing participant details
-          sessionStorage.setItem(
-            `${LOCAL_STORAGE_KEYS.PIECE_PUZZLE_PARTICIPANT_ID}:${response.puzzleId}`,
-            response.participantId,
-          );
-          sessionStorage.setItem(
-            `${LOCAL_STORAGE_KEYS.PIECE_PUZZLE_TOKEN}:${response.puzzleId}`,
-            response.token ?? '',
-          );
-
-          this.router.navigate(['/games/piece-puzzle', response.puzzleId]);
-        },
-
         error: (error) => {
           this.piecePuzzleErrorMessage.set(
             error?.error?.error ?? 'Something went wrong. Please try again.',
