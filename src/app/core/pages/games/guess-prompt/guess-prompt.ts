@@ -9,6 +9,7 @@ import {
   GameWsErrorMessageActionEnum,
   GameWsErrorMessageTypeEnum,
   GameWsGuessMessageTypeEnum,
+  GameWsGuessMessage,
   GameWsGuessRequestTypeEnum,
   GameWsGuessResultMessage,
   GameWsGuessResultMessageTypeEnum,
@@ -58,6 +59,9 @@ import {
   LeaderboardComponent,
   LeaderboardDisplayEntry,
 } from '@core/components/leaderboard/leaderboard';
+
+const MAX_VISIBLE_GUESSES = 5;
+const GUESS_VISIBILITY_MS = 8_000;
 
 @Component({
   selector: 'app-guess-prompt',
@@ -139,11 +143,25 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
 
   readonly guessResult = signal<GuessResult | null>(null);
   readonly answeredCorrectly = signal(false);
+  readonly liveGuesses = signal<
+    Array<{
+      id: number;
+      index: number;
+      participantId: string;
+      player: string;
+      color: string;
+      correct: boolean;
+      score: number | null;
+      guess: string;
+    }>
+  >([]);
   readonly resultRoundIndex = signal(0);
 
   private lobbyTimer?: Subscription;
   private roundTimer?: Subscription;
   private postRoundTimer?: Subscription;
+  private nextLiveGuessId = 0;
+  private readonly liveGuessTimeouts = new Map<number, ReturnType<typeof setTimeout>>();
 
   readonly currentRound = computed(() => {
     const game = this.game();
@@ -290,6 +308,7 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.stopTimers();
+    this.clearLiveGuesses();
 
     const gameId = this.gameId();
     if (gameId) this.guessPromptGameService.clearGameCredentials(gameId);
@@ -365,10 +384,13 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
         break;
 
       case GameWsPromptsReadyMessageTypeEnum.PromptsReady:
-      case GameWsGuessMessageTypeEnum.Guess:
       case GameWsRevealedMessageTypeEnum.Revealed:
       case WsPlayerJoinedMessageTypeEnum.PlayerJoined:
       case GameWsPlayerTypingMessageTypeEnum.PlayerTyping:
+        break;
+
+      case GameWsGuessMessageTypeEnum.Guess:
+        this.handlePublicGuess(message);
         break;
     }
   }
@@ -1009,6 +1031,39 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   }
 
+  private handlePublicGuess(message: GameWsGuessMessage): void {
+    const id = ++this.nextLiveGuessId;
+
+    this.liveGuesses.update((guesses) =>
+      [
+        ...guesses,
+        {
+          id,
+          index: message.index,
+          participantId: message.participantId,
+          player: message.player,
+          color: message.color,
+          correct: message.correct,
+          score: message.score,
+          guess: message.guess ?? '',
+        },
+      ].slice(-MAX_VISIBLE_GUESSES),
+    );
+
+    const timeout = setTimeout(() => {
+      this.liveGuesses.update((guesses) => guesses.filter((guess) => guess.id !== id));
+      this.liveGuessTimeouts.delete(id);
+    }, GUESS_VISIBILITY_MS);
+
+    this.liveGuessTimeouts.set(id, timeout);
+  }
+
+  private clearLiveGuesses(): void {
+    for (const timeout of this.liveGuessTimeouts.values()) clearTimeout(timeout);
+    this.liveGuessTimeouts.clear();
+    this.liveGuesses.set([]);
+  }
+
   previousResultRound(): void {
     if (!this.canViewPreviousResultRound()) return;
     this.resultRoundIndex.update((index) => index - 1);
@@ -1034,6 +1089,7 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
     this.replaying.set(false);
     this.guessResult.set(null);
     this.answeredCorrectly.set(false);
+    this.clearLiveGuesses();
     this.resultRoundIndex.set(0);
     this.guessForm.reset();
 
