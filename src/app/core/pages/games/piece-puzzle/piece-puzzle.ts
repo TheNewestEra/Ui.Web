@@ -24,6 +24,7 @@ import {
   PuzzleWsTileDeselectedMessageTypeEnum,
   PuzzleWsTileSelectedMessage,
   PuzzleWsTileSelectedMessageTypeEnum,
+  PuzzleWsTimeoutMessage,
   PuzzleWsTimeoutMessageTypeEnum,
   WsPresenceMessage,
   WsPresenceMessageTypeEnum,
@@ -179,20 +180,34 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
   readonly leaderboardEntries = computed<LeaderboardDisplayEntry[]>(() => {
     const game = this.game();
 
-    // TODO: BE to give scores to each player, not just the player who solved it
-    if (!game?.solvedBy || game.score == null) return [];
+    if (!game) return [];
 
-    const solver = game.participants.find((participant) => participant.name === game.solvedBy);
+    const scores = new Map(game.results.map((result) => [result.participantId, result.score]));
+    const entries = game.participants.map((participant) => ({
+      id: participant.id,
+      name: participant.name,
+      color: participant.color,
+      score: scores.get(participant.id) ?? 0,
+    }));
 
-    return [
-      {
-        id: game.solvedBy,
-        name: game.solvedBy,
-        color: solver?.color ?? '#000000',
-        score: game.score,
-        rank: 1,
-      },
-    ];
+    for (const result of game.results) {
+      if (entries.some(({ id }) => id === result.participantId)) continue;
+
+      const participant = game.participants.find(
+        (candidate) => candidate.id === result.participantId,
+      );
+
+      entries.push({
+        id: result.participantId,
+        name: participant?.name ?? 'Unknown player',
+        color: participant?.color ?? 'transparent',
+        score: result.score,
+      });
+    }
+
+    return entries
+      .sort((a, b) => b.score - a.score)
+      .map((entry, index) => ({ ...entry, rank: index + 1 }));
   });
 
   readonly currentParticipant = computed(() => {
@@ -204,10 +219,14 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
 
   readonly participantColor = computed(() => this.currentParticipant()?.color ?? null);
 
-  readonly currentLeaderboardId = computed(() => {
-    const solver = this.game()?.solvedBy;
+  readonly currentPlayerScore = computed(() => {
+    const currentParticipant = this.currentParticipant();
+    if (!currentParticipant) return 0;
 
-    return solver === this.userState.displayName() ? solver : null;
+    return (
+      this.game()?.results.find(({ participantId }) => participantId === currentParticipant.id)
+        ?.score ?? 0
+    );
   });
 
   constructor() {
@@ -471,7 +490,7 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
         break;
 
       case PuzzleWsTimeoutMessageTypeEnum.Timeout:
-        this.handleTimeout();
+        this.handleTimeout(message);
         break;
 
       case WsPresenceMessageTypeEnum.Presence:
@@ -523,6 +542,7 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
     this.game.set({
       id: message.id,
       theme: message.theme ?? '',
+      themeGenerated: message.themeGenerated,
       prompt: message.prompt ?? '',
       status: message.status,
       error: message.error ?? '',
@@ -533,11 +553,11 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
       remainingMs: message.remainingMs ?? 0,
       lobbyRemainingMs: message.lobbyRemainingMs ?? 0,
       endedAt: message.endedAt ?? 0,
-      score: message.score ?? 0,
       solvedBy: message.solvedBy ?? '',
       connectedPlayers: message.connectedPlayers,
       participants: message.participants,
       selections: message.selections,
+      results: message.results,
     });
     this.loading.set(false);
     this.errorMessage.set(null);
@@ -556,6 +576,8 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
       return {
         ...game,
         board,
+        results:
+          message.score == null ? game.results : this.addMoveScore(game, message.by, message.score),
       };
     });
 
@@ -592,9 +614,9 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
         ...game,
         board: message.board,
         status: PuzzleStatus.Solved,
-        score: message.score,
         solvedBy: message.solvedBy,
         remainingMs: message.remainingMs,
+        results: message.results,
       };
     });
 
@@ -607,7 +629,24 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
     this.clearParticipantCredentials(false);
   }
 
-  private handleTimeout(): void {
+  private addMoveScore(game: Puzzle, playerName: string, score: number): Puzzle['results'] {
+    const participant = game.participants.find(({ name }) => name === playerName);
+    if (!participant) return game.results;
+
+    const existingResult = game.results.find(
+      ({ participantId }) => participantId === participant.id,
+    );
+
+    if (!existingResult) {
+      return [...game.results, { participantId: participant.id, score }];
+    }
+
+    return game.results.map((result) =>
+      result.participantId === participant.id ? { ...result, score: result.score + score } : result,
+    );
+  }
+
+  private handleTimeout(message: PuzzleWsTimeoutMessage): void {
     this.game.update((game) => {
       if (!game) return game;
 
@@ -615,7 +654,7 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
         ...game,
         status: PuzzleStatus.Timeout,
         remainingMs: 0,
-        score: 0,
+        results: message.results,
       };
     });
 
