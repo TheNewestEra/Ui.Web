@@ -7,12 +7,12 @@ export type Theme = 'light' | 'dark' | 'forest';
   providedIn: 'root',
 })
 export class ThemeService {
-  readonly theme = signal<Theme>('light');
+  readonly theme = signal<Theme>('dark');
 
   constructor() {
     const saved = localStorage.getItem(LOCAL_STORAGE_KEYS.THEME) as Theme | null;
 
-    this.setTheme(saved ?? 'light');
+    this.setTheme(saved ?? 'dark');
   }
 
   toggleTheme(): void {
