@@ -242,7 +242,7 @@
             </div>
 
             @if (hasJoined()) {
-              <app-game-rating class="w-full" [gameId]="game.id" />
+              <app-game-rating class="w-full" [gameType]="'guess'" [gameId]="game.id" />
             }
 
             <app-leaderboard

@@ -187,7 +187,11 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
   });
 
   readonly hasJoined = computed(() => {
-    return !!this.participantId();
+    const participantId = this.participantId();
+    return (
+      !!participantId &&
+      !!this.game()?.participants.some((participant) => participant.id === participantId)
+    );
   });
 
   readonly isSpectator = computed(() => {
@@ -267,7 +271,8 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
   });
 
   readonly isHost = computed(() => {
-    return !!sessionStorage.getItem(this.storageKey(LOCAL_STORAGE_KEYS.GUESS_HOST_TOKEN));
+    const gameId = this.gameId();
+    return !!gameId && !!this.guessPromptGameService.get(LOCAL_STORAGE_KEYS.GUESS_HOST_TOKEN, gameId);
   });
 
   ngOnInit(): void {
@@ -312,9 +317,6 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.stopTimers();
     this.clearLiveGuesses();
-
-    const gameId = this.gameId();
-    if (gameId) this.guessPromptGameService.clearGameCredentials(gameId);
 
     this.guessPromptSocket.disconnect();
   }
@@ -409,11 +411,7 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
 
     if (!gameId) return;
 
-    sessionStorage.setItem(
-      this.storageKey(LOCAL_STORAGE_KEYS.GUESS_PARTICIPANT_ID),
-      message.participantId,
-    );
-    sessionStorage.setItem(this.storageKey(LOCAL_STORAGE_KEYS.GUESS_TOKEN), message.token ?? '');
+    this.guessPromptGameService.storeParticipant(gameId, message.participantId, message.token);
 
     this.joining.set(false);
     this.refreshPlayerIdentity(gameId);
@@ -826,7 +824,7 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
     if (!gameId || this.game()?.status !== GameStatus.Waiting) return;
 
     const hostToken =
-      sessionStorage.getItem(this.storageKey(LOCAL_STORAGE_KEYS.GUESS_HOST_TOKEN)) ?? '';
+      this.guessPromptGameService.get(LOCAL_STORAGE_KEYS.GUESS_HOST_TOKEN, gameId) ?? '';
 
     this.errorMessage.set(null);
 
@@ -1022,9 +1020,8 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
     this.guessPromptSocket.send({
       type: GameWsGuessRequestTypeEnum.Guess,
       index: this.currentRound() ?? 0,
-      participantId:
-        sessionStorage.getItem(this.storageKey(LOCAL_STORAGE_KEYS.GUESS_PARTICIPANT_ID)) ?? '',
-      token: sessionStorage.getItem(this.storageKey(LOCAL_STORAGE_KEYS.GUESS_TOKEN)) ?? undefined,
+      participantId: this.participantId() ?? '',
+      token: this.guessPromptGameService.get(LOCAL_STORAGE_KEYS.GUESS_TOKEN, gameId) ?? undefined,
       guess,
     });
   }
@@ -1034,6 +1031,9 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
   // ---------------------------------------------------------------------------
   private finishGame(): void {
     this.stopTimers();
+
+    const gameId = this.gameId();
+    if (gameId) this.guessPromptGameService.clearGameCredentials(gameId);
 
     this.guessResult.set(null);
     this.guessForm.reset();
@@ -1122,6 +1122,9 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
   private handleGameFinished(): void {
     this.stopTimers();
 
+    const gameId = this.gameId();
+    if (gameId) this.guessPromptGameService.clearGameCredentials(gameId);
+
     this.guessResult.set(null);
     this.guessForm.reset();
   }
@@ -1152,8 +1155,10 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
   }
 
   private refreshPlayerIdentity(gameId: string): void {
+    this.guessPromptGameService.clearExpiredGameCredentials(gameId);
     this.participantId.set(
-      sessionStorage.getItem(`${LOCAL_STORAGE_KEYS.GUESS_PARTICIPANT_ID}:${gameId}`),
+      this.userState.user()?.id ??
+        this.guessPromptGameService.get(LOCAL_STORAGE_KEYS.GUESS_PARTICIPANT_ID, gameId),
     );
   }
 
@@ -1179,10 +1184,9 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
   }
 
   private rememberAnsweredRound(roundIndex: number): void {
-    sessionStorage.setItem(
-      this.storageKey(LOCAL_STORAGE_KEYS.GUESS_ANSWERED_ROUND),
-      `${roundIndex}`,
-    );
+    const gameId = this.gameId();
+    if (gameId)
+      this.guessPromptGameService.set(LOCAL_STORAGE_KEYS.GUESS_ANSWERED_ROUND, gameId, `${roundIndex}`);
   }
 
   private wasRoundAnswered(roundIndex: number | null | undefined): boolean {
@@ -1191,12 +1195,8 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
     if (!gameId || roundIndex == null) return false;
 
     return (
-      sessionStorage.getItem(this.storageKey(LOCAL_STORAGE_KEYS.GUESS_ANSWERED_ROUND)) ===
+      this.guessPromptGameService.get(LOCAL_STORAGE_KEYS.GUESS_ANSWERED_ROUND, gameId) ===
       `${roundIndex}`
     );
-  }
-
-  private storageKey(baseKey: string): string {
-    return `${baseKey}:${this.gameId()}`;
   }
 }

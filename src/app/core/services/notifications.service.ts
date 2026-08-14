@@ -6,7 +6,7 @@ import {
 import { Observable, Subject } from 'rxjs';
 import { WS_BASE_URL } from '@core/constants/base-urls.constants';
 import { NotificationSocketMessage, PushableNotification } from '@core/models/notification.model';
-import { UserStateService } from './user-state.service';
+import { UserStateService } from '@core/services/user-state.service';
 
 const RECONNECT_DELAY_MS = 3000;
 

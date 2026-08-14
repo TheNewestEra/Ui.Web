@@ -236,7 +236,7 @@
             </div>
 
             @if (hasJoined()) {
-              <app-game-rating [gameId]="game.id" />
+              <app-game-rating [gameType]="'puzzle'" [gameId]="game.id" />
             }
 
             <app-leaderboard

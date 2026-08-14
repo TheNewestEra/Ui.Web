@@ -4,17 +4,21 @@ export const LOCAL_STORAGE_KEYS = {
   USERNAME: 'username',
   THEME: 'theme',
 
-  // Piece Puzzle
+  // Piece Puzzle (post-session, keyed per gameId via `${key_prefix}:${gameId}`)
   PIECE_PUZZLE_PARTICIPANT_ID: 'piecePuzzleParticipantId',
   PIECE_PUZZLE_TOKEN: 'piecePuzzleToken',
   PIECE_PUZZLE_HOST_TOKEN: 'piecePuzzleHostToken',
+  PIECE_PUZZLE_EXPIRES_AT: 'piecePuzzleExpiresAt',
+  PIECE_PUZZLE_RATED: 'piecePuzzleRated',
 
-  // Guess
+  // Guess (post-session, keyed per gameId via `${key_prefix}:${gameId}`)
   GUESS_PARTICIPANT_ID: 'guessParticipantId',
   GUESS_TOKEN: 'guessToken',
   GUESS_HOST_TOKEN: 'guessHostToken',
+  GUESS_EXPIRES_AT: 'guessExpiresAt',
   GUESS_ANSWERED_ROUND: 'guessAnsweredRound',
-
-  // Ratings (post-session, keyed per gameId via `${RATED_GAME_PREFIX}:${gameId}`)
-  RATED_GAME_PREFIX: 'ratedGame',
+  GUESS_RATED_GAME: 'guessRated',
 };
+
+// 1 hour
+export const GAME_SESSION_TTL_MS = 60 * 60 * 1000;

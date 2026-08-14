@@ -1,6 +1,6 @@
 import { Component, computed, DestroyRef, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { KeyValuePipe } from '@angular/common';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
 import {
   PiecePuzzleService,
   Puzzle,
@@ -40,6 +40,7 @@ import { PiecePuzzleSocketService } from '@core/services/piece-puzzle-socket.ser
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { ButtonComponent } from '@shared/components/button/button';
 import { LOCAL_STORAGE_KEYS } from '@core/constants/local-storage-keys.constants';
+import { PiecePuzzleGameService } from '@core/services/piece-puzzle-game.service';
 import { IconComponent } from '@shared/ui/icon/icon';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { distinctUntilChanged, filter, finalize, map } from 'rxjs';
@@ -75,8 +76,8 @@ import { GameRatingComponent } from '@core/components/game-rating/game-rating';
 export class PiecePuzzleGamePage implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly destroyRef = inject(DestroyRef);
-  private readonly router = inject(Router);
   private readonly piecePuzzleService = inject(PiecePuzzleService);
+  private readonly piecePuzzleGameService = inject(PiecePuzzleGameService);
   private readonly puzzleSocket = inject(PiecePuzzleSocketService);
   private readonly friendsService = inject(FriendsService);
   private readonly invitesService = inject(InvitesService);
@@ -143,7 +144,8 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
   });
 
   readonly isHost = computed(() => {
-    return !!sessionStorage.getItem(this.storageKey(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_HOST_TOKEN));
+    const gameId = this.gameId();
+    return !!gameId && !!this.piecePuzzleGameService.get(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_HOST_TOKEN, gameId);
   });
 
   readonly hasJoined = computed(() => {
@@ -277,8 +279,6 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
 
     if (imageUrl) URL.revokeObjectURL(imageUrl);
 
-    this.clearParticipantCredentials();
-
     this.puzzleSocket.disconnect();
   }
 
@@ -288,8 +288,7 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
     if (!gameId || !this.isHost() || this.starting()) return;
 
     const hostToken =
-      sessionStorage.getItem(this.storageKey(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_HOST_TOKEN)) ??
-      undefined;
+      this.piecePuzzleGameService.get(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_HOST_TOKEN, gameId) ?? undefined;
 
     this.starting.set(true);
     this.errorMessage.set(null);
@@ -394,20 +393,12 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
     this.replaying.set(true);
     this.errorMessage.set(null);
 
-    this.piecePuzzleService
-      .puzzlesIdReplayPost(gameId)
+    this.piecePuzzleGameService
+      .replay(gameId)
       .pipe(finalize(() => this.replaying.set(false)))
       .subscribe({
         next: (response) => {
-          this.clearParticipantCredentials();
-
-          sessionStorage.setItem(
-            `${LOCAL_STORAGE_KEYS.PIECE_PUZZLE_HOST_TOKEN}:${response.puzzleId}`,
-            response.hostToken,
-          );
           this.joinOnNextConnection = true;
-
-          void this.router.navigate(['/games/piece-puzzle', response.puzzleId]);
         },
         error: (error) => {
           this.errorMessage.set(error?.error?.error ?? 'Unable to restart the puzzle.');
@@ -518,9 +509,7 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
       new Map(message.selections.map((s) => [s.cell, { player: s.player, color: s.color }])),
     );
 
-    const myParticipantId = sessionStorage.getItem(
-      this.storageKey(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_PARTICIPANT_ID),
-    );
+    const myParticipantId = this.participantId();
     this.selectedTile.set(
       message.selections.find((s) => s.participantId === myParticipantId)?.cell ?? null,
     );
@@ -609,6 +598,7 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
     this.solved.set(true);
     this.tileSelections.set(new Map());
     this.stopTimer();
+    this.clearParticipantCredentials(false);
   }
 
   private handleTimeout(): void {
@@ -629,18 +619,14 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
     this.tileSelections.set(new Map());
 
     this.stopTimer();
+    this.clearParticipantCredentials(false);
   }
 
   /** Persists the credentials every later move/select message must carry. */
   private handleJoinResult(message: PuzzleWsJoinResultMessage): void {
-    sessionStorage.setItem(
-      this.storageKey(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_PARTICIPANT_ID),
-      message.participantId,
-    );
-    sessionStorage.setItem(
-      this.storageKey(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_TOKEN),
-      message.token ?? '',
-    );
+    const gameId = this.gameId();
+    if (gameId)
+      this.piecePuzzleGameService.storeParticipant(gameId, message.participantId, message.token);
     this.participantId.set(message.participantId);
     this.joinedPlayerName.set(this.userState.displayName());
     this.joining.set(false);
@@ -869,11 +855,9 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
       type: PuzzleWsMoveRequestTypeEnum.Move,
       cellA,
       cellB,
-      participantId:
-        sessionStorage.getItem(this.storageKey(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_PARTICIPANT_ID)) ??
-        '',
+      participantId: this.participantId() ?? '',
       token:
-        sessionStorage.getItem(this.storageKey(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_TOKEN)) ?? undefined,
+        this.piecePuzzleGameService.get(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_TOKEN, this.gameId()!) ?? undefined,
     });
   }
 
@@ -883,11 +867,9 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
     this.puzzleSocket.send({
       type: PuzzleWsSelectRequestTypeEnum.Select,
       cell,
-      participantId:
-        sessionStorage.getItem(this.storageKey(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_PARTICIPANT_ID)) ??
-        '',
+      participantId: this.participantId() ?? '',
       token:
-        sessionStorage.getItem(this.storageKey(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_TOKEN)) ?? undefined,
+        this.piecePuzzleGameService.get(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_TOKEN, this.gameId()!) ?? undefined,
     });
   }
 
@@ -900,32 +882,29 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
 
     this.puzzleSocket.send({
       type: PuzzleWsDeselectRequestTypeEnum.Deselect,
-      participantId:
-        sessionStorage.getItem(this.storageKey(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_PARTICIPANT_ID)) ??
-        '',
+      participantId: this.participantId() ?? '',
       token:
-        sessionStorage.getItem(this.storageKey(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_TOKEN)) ?? undefined,
+        this.piecePuzzleGameService.get(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_TOKEN, this.gameId()!) ?? undefined,
     });
   }
 
   private refreshPlayerIdentity(): void {
+    const gameId = this.gameId();
+    if (!gameId) return;
+    this.piecePuzzleGameService.clearIfExpired(gameId);
     this.participantId.set(
-      sessionStorage.getItem(this.storageKey(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_PARTICIPANT_ID)),
+      this.userState.user()?.id ??
+        this.piecePuzzleGameService.get(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_PARTICIPANT_ID, gameId),
     );
   }
 
-  private clearParticipantCredentials(): void {
-    sessionStorage.removeItem(this.storageKey(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_PARTICIPANT_ID));
-    sessionStorage.removeItem(this.storageKey(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_TOKEN));
-    sessionStorage.removeItem(this.storageKey(LOCAL_STORAGE_KEYS.PIECE_PUZZLE_HOST_TOKEN));
-    sessionStorage.removeItem(this.storageKey(LOCAL_STORAGE_KEYS.RATED_GAME_PREFIX));
+  private clearParticipantCredentials(clearCurrentIdentity = true): void {
+    const gameId = this.gameId();
+    if (gameId) this.piecePuzzleGameService.clear(gameId);
 
-    this.participantId.set(null);
+    if (clearCurrentIdentity) this.participantId.set(null);
   }
 
-  private storageKey(baseKey: string): string {
-    return `${baseKey}:${this.gameId()}`;
-  }
 
   private loadInviteRecipients(): void {
     if (!this.userState.isLoggedIn() || this.inviteRecipientsLoaded) return;

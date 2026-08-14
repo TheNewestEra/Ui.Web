@@ -6,8 +6,8 @@ import {
   PushableNotification,
 } from '@core/models/notification.model';
 import { ToastService } from '@shared/services/toast.service';
-import { InviteResponseService } from './invite-response.service';
-import { NotificationsService } from './notifications.service';
+import { InviteResponseService } from '@core/services/invite-response.service';
+import { NotificationsService } from '@core/services/notifications.service';
 
 const TOAST_DURATION_MS = 15000;
 
