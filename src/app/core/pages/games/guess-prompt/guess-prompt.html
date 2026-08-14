@@ -189,39 +189,70 @@
         </div>
       }
 
-      @if (game?.status === GameStatus.Solved) {
-        <div class="flex flex-col items-center gap-8 py-10">
-          <div class="text-center">
-            <h2 class="text-3xl font-bold">Game Completed</h2>
+      @if (game?.status === GameStatus.Solved || game?.status === GameStatus.Timeout) {
+        <div class="grid items-start gap-8 py-10 lg:grid-cols-2">
+          <div class="flex min-w-0 flex-col gap-4">
+            <div class="relative aspect-square overflow-hidden rounded-box bg-base-200">
+              @if (resultRound()?.imageUrl; as imageUrl) {
+                <img
+                  [src]="imageUrl"
+                  [alt]="'Generated image for round ' + (resultRoundIndex() + 1)"
+                  class="size-full object-cover"
+                />
+              } @else {
+                <div class="skeleton size-full rounded-box"></div>
+              }
+            </div>
 
-            <p class="mt-2 text-base-content/60">Great game! Here are the final scores.</p>
+            <div class="join flex justify-center">
+              <button
+                type="button"
+                class="join-item btn btn-outline btn-sm"
+                [disabled]="!canViewPreviousResultRound()"
+                (click)="previousResultRound()"
+              >
+                Previous
+              </button>
+              <button type="button" class="join-item btn btn-outline btn-sm pointer-events-none">
+                Round {{ resultRoundIndex() + 1 }} of {{ game.rounds.length }}
+              </button>
+              <button
+                type="button"
+                class="join-item btn btn-outline btn-sm"
+                [disabled]="!canViewNextResultRound()"
+                (click)="nextResultRound()"
+              >
+                Next
+              </button>
+            </div>
           </div>
 
-          <app-leaderboard
-            class="w-full max-w-2xl"
-            [entries]="leaderboardEntries()"
-            [currentId]="participantId()"
-            [showHeading]="false"
-            emptyMessage="No scores were recorded."
-          />
+          <div class="flex min-w-0 flex-col gap-6">
+            <div>
+              <h2 class="text-3xl font-bold">
+                {{ game?.status === GameStatus.Solved ? 'Game Completed' : "Time's Up!" }}
+              </h2>
+              <p class="mt-2 text-base-content/60">
+                {{
+                  game?.status === GameStatus.Solved
+                    ? 'Great game! Here are the final scores.'
+                    : "The game wasn't completed in time."
+                }}
+              </p>
+            </div>
 
-          <app-button [loading]="replaying()" [disabled]="replaying()" (clicked)="replayGame()">
-            Play Again
-          </app-button>
-        </div>
-      }
+            <app-leaderboard
+              class="w-full"
+              [entries]="leaderboardEntries()"
+              [currentId]="participantId()"
+              [showHeading]="false"
+              emptyMessage="No scores were recorded."
+            />
 
-      @if (game?.status === GameStatus.Timeout) {
-        <div class="flex flex-col items-center gap-8 py-10">
-          <div class="text-center">
-            <h2 class="text-3xl font-bold">Time's Up!</h2>
-
-            <p class="mt-2 text-base-content/60">The game wasn't completed in time.</p>
+            <app-button [loading]="replaying()" [disabled]="replaying()" (clicked)="replayGame()">
+              Play Again
+            </app-button>
           </div>
-
-          <app-button [loading]="replaying()" [disabled]="replaying()" (clicked)="replayGame()">
-            Play Again
-          </app-button>
         </div>
       }
 
@@ -417,6 +448,64 @@
                     subtitle="Live scores for this game"
                   />
                 }
+
+                @if (liveGuesses().length) {
+                  <div class="overflow-hidden rounded-box border border-base-300 bg-base-100">
+                    <p
+                      class="border-b border-base-300 px-4 py-3 text-sm font-semibold text-base-content/60"
+                    >
+                      Live guesses
+                    </p>
+                    <div class="flex flex-col">
+                      @for (guess of liveGuesses(); track guess.id) {
+                        @if (guess.index === game.currentRound) {
+                          <div
+                            class="flex gap-3 border-b border-base-200 px-4 py-3 last:border-b-0"
+                          >
+                            <span
+                              class="mt-1 size-3 shrink-0 rounded-full ring-2 ring-base-300"
+                              [style.background-color]="guess.color"
+                            ></span>
+                            <p class="min-w-0 text-sm">
+                              <span class="font-semibold" [style.color]="guess.color">
+                                {{ guess.player }}
+                              </span>
+                              @if (guess.correct) {
+                                <span class="text-success">
+                                  guessed correctly and earned {{ guess.score ?? 0 }} points!
+                                </span>
+                              } @else {
+                                <span class="text-base-content/70">
+                                  guessed "{{ guess.guess }}"
+                                </span>
+                              }
+                            </p>
+                          </div>
+                        }
+                      }
+                    </div>
+                  </div>
+                }
+
+                <div class="rounded-box border border-base-300 p-4">
+                  <p class="mb-3 text-sm font-semibold text-base-content/60">Participants</p>
+                  <div class="flex flex-col gap-2">
+                    @for (participant of game.participants; track participant.id) {
+                      <div class="rounded-box bg-base-200 px-3 py-2">
+                        <div class="flex items-center gap-2">
+                          <span
+                            class="size-3 shrink-0 rounded-full ring-2 ring-base-300"
+                            [style.background-color]="participant.color"
+                          ></span>
+                          <span class="font-medium">{{ participant.name }}</span>
+                          @if (participant.id === participantId()) {
+                            <span class="badge badge-primary badge-sm ml-auto">You</span>
+                          }
+                        </div>
+                      </div>
+                    }
+                  </div>
+                </div>
               </div>
             </div>
           } @else {
