@@ -81,6 +81,7 @@ import {
 import { GameRatingComponent } from '@core/components/game-rating/game-rating';
 import { SelectComponent, SelectOption } from '@shared/components/form/select/select';
 import { SoundService } from '@shared/services/sound.service';
+import { ParticipantListComponent } from '@core/components/participant-list/participant-list';
 
 const MAX_VISIBLE_GUESSES = 5;
 const GUESS_VISIBILITY_MS = 8_000;
@@ -100,6 +101,7 @@ const GUESS_VISIBILITY_MS = 8_000;
     LeaderboardComponent,
     GameRatingComponent,
     SelectComponent,
+    ParticipantListComponent,
     SuccessAlertComponent,
   ],
   templateUrl: './guess-prompt.html',

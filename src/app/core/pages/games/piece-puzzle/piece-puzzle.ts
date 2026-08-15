@@ -8,7 +8,6 @@ import {
   signal,
   WritableSignal,
 } from '@angular/core';
-import { KeyValuePipe } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import {
   PiecePuzzleService,
@@ -69,6 +68,7 @@ import {
 import { GameRatingComponent } from '@core/components/game-rating/game-rating';
 import { SelectComponent, SelectOption } from '@shared/components/form/select/select';
 import { SoundService } from '@shared/services/sound.service';
+import { ParticipantListComponent } from '@core/components/participant-list/participant-list';
 
 @Component({
   selector: 'app-piece-puzzle',
@@ -80,10 +80,10 @@ import { SoundService } from '@shared/services/sound.service';
     ButtonComponent,
     IconComponent,
     ReactiveFormsModule,
-    KeyValuePipe,
     LeaderboardComponent,
     GameRatingComponent,
     SelectComponent,
+    ParticipantListComponent,
   ],
   templateUrl: './piece-puzzle.html',
   styleUrl: './piece-puzzle.css',
@@ -243,6 +243,25 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
   });
 
   readonly participantColor = computed(() => this.currentParticipant()?.color ?? null);
+
+  readonly participantActivity = computed<Readonly<Record<string, string>>>(() => {
+    const activity: Record<string, string> = {};
+
+    for (const participant of this.game()?.participants ?? []) {
+      const move = this.lastMoves().get(participant.name);
+      if (move) {
+        activity[participant.id] = `Moved tiles ${move.cellA + 1} and ${move.cellB + 1}`;
+        continue;
+      }
+
+      const selection = [...this.tileSelections().entries()].find(
+        ([, selected]) => selected.player === participant.name,
+      );
+      if (selection) activity[participant.id] = `Selected tile ${selection[0] + 1}`;
+    }
+
+    return activity;
+  });
 
   readonly currentPlayerScore = computed(() => {
     const currentParticipant = this.currentParticipant();
