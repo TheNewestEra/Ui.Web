@@ -52,6 +52,8 @@ export class GamesPage {
     },
   ];
 
+  // Resolving https://github.com/TheNewestEra/Ui.Web/pull/57/changes#r3790122343
+  // These are seconds
   readonly puzzleTimeLimits: SelectOption[] = [
     {
       label: '1 minute',
