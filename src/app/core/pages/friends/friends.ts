@@ -21,7 +21,8 @@ import { FormFieldComponent } from '@shared/components/form/form-field/form-fiel
 import { ErrorAlertComponent } from '@shared/components/alert/error/error';
 import { IconComponent } from '@shared/ui/icon/icon';
 import { FriendPersonRowComponent } from '@core/components/friend-person-row/friend-person-row';
-import { SuccessAlertComponent } from "@shared/components/alert/success/success";
+import { SuccessAlertComponent } from '@shared/components/alert/success/success';
+import { SoundService } from '@shared/services/sound.service';
 
 @Component({
   selector: 'app-friends',
@@ -37,8 +38,8 @@ import { SuccessAlertComponent } from "@shared/components/alert/success/success"
     ErrorAlertComponent,
     IconComponent,
     FriendPersonRowComponent,
-    SuccessAlertComponent
-],
+    SuccessAlertComponent,
+  ],
   templateUrl: './friends.html',
   styleUrl: './friends.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -48,6 +49,7 @@ export class FriendsPage {
   private readonly invitesService = inject(InvitesService);
   private readonly router = inject(Router);
   private readonly fb = inject(FormBuilder);
+  private readonly sound = inject(SoundService);
 
   readonly friends = signal<FriendSummary[]>([]);
   readonly incomingRequests = signal<FriendRequestSummary[]>([]);
@@ -104,7 +106,10 @@ export class FriendsPage {
       'friend-request',
       this.friendsService.apiFriendsRequestPost({ username }),
       'Friend request sent.',
-      () => this.friendRequestForm.reset(),
+      () => {
+        this.friendRequestForm.reset();
+        this.sound.requestSent();
+      },
     );
   }
 
@@ -113,6 +118,7 @@ export class FriendsPage {
       `accept-${id}`,
       this.friendsService.apiFriendsRequestsIdAcceptPost(id),
       'Friend request accepted.',
+      () => this.sound.accepted(),
     );
   }
 
@@ -191,6 +197,7 @@ export class FriendsPage {
       .pipe(finalize(() => this.actionLoading.set(null)))
       .subscribe({
         next: (response) => {
+          this.sound.accepted();
           if (/^https?:\/\//.test(response.playUrl)) window.location.assign(response.playUrl);
           else void this.router.navigateByUrl(response.playUrl);
         },
@@ -202,7 +209,8 @@ export class FriendsPage {
     this.runAction(
       `decline-invite-${id}`,
       this.invitesService.apiInvitesIdDeclinePost(id),
-      'Invite declined.',
+      'Invite  declined.',
+      () => this.sound.declined(),
     );
   }
 

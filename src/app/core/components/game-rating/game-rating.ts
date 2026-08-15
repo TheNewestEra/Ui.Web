@@ -14,6 +14,7 @@ import { UserStateService } from '@core/services/user-state.service';
 import { LOCAL_STORAGE_KEYS } from '@core/constants/local-storage-keys.constants';
 import { SuccessAlertComponent } from '@shared/components/alert/success/success';
 import { ErrorAlertComponent } from '@shared/components/alert/error/error';
+import { SoundService } from '@shared/services/sound.service';
 
 @Component({
   selector: 'app-game-rating',
@@ -25,6 +26,7 @@ import { ErrorAlertComponent } from '@shared/components/alert/error/error';
 export class GameRatingComponent {
   private readonly browseService = inject(BrowseService);
   private readonly userState = inject(UserStateService);
+  private readonly sound = inject(SoundService);
 
   readonly gameType = input.required<'puzzle' | 'guess'>();
   readonly gameId = input.required<string>();
@@ -65,6 +67,7 @@ export class GameRatingComponent {
       .subscribe({
         next: () => {
           this.submittedStars.set(stars);
+          this.sound.rated();
 
           localStorage.setItem(this.storageKey(), `${stars}`);
         },

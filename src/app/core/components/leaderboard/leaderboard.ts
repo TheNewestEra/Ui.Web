@@ -25,6 +25,7 @@ import {
 import { FriendsService } from '@thenewestera/friends-ng';
 import { UserStateService } from '@core/services/user-state.service';
 import { ErrorAlertComponent } from '@shared/components/alert/error/error';
+import { SoundService } from '@shared/services/sound.service';
 
 export interface LeaderboardDisplayEntry {
   id: string;
@@ -57,6 +58,7 @@ export class LeaderboardComponent implements OnInit {
   private readonly userStateService = inject(UserStateService);
   private readonly fb = inject(FormBuilder);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly sound = inject(SoundService);
   private requestId = 0;
 
   readonly kindOptions: SelectOption[] = [
@@ -183,6 +185,7 @@ export class LeaderboardComponent implements OnInit {
       .pipe(finalize(() => this.friendRequestLoadingId.set(null)))
       .subscribe({
         next: () => {
+          this.sound.requestSent();
           this.pendingFriendRequestIds.update((ids) => new Set(ids).add(entry.id));
         },
         error: (error) => {

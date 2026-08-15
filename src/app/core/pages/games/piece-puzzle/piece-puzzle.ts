@@ -67,6 +67,7 @@ import {
   LeaderboardDisplayEntry,
 } from '@core/components/leaderboard/leaderboard';
 import { GameRatingComponent } from '@core/components/game-rating/game-rating';
+import { SoundService } from '@shared/services/sound.service';
 
 @Component({
   selector: 'app-piece-puzzle',
@@ -94,6 +95,7 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
   private readonly friendsService = inject(FriendsService);
   private readonly invitesService = inject(InvitesService);
   readonly userState = inject(UserStateService);
+  private readonly sound = inject(SoundService);
 
   readonly PuzzleStatus = PuzzleStatus;
   readonly isLoggedIn = this.userState.isLoggedIn;
@@ -497,6 +499,10 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   }
 
+  private playCountdownSound(milliseconds: number): void {
+    if (milliseconds > 0 && milliseconds <= 5000) this.sound.countdown();
+  }
+
   private handleSocketMessage(message: PuzzleWsMessage): void {
     switch (message.type) {
       case PuzzleWsStateMessageTypeEnum.State:
@@ -554,6 +560,8 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
    * full snapshot and the previous local state might be stale (e.g. this is
    * the very first message after connecting). */
   private handleState(message: PuzzleWsStateMessage): void {
+    const previousStatus = this.game()?.status;
+
     this.updateTimers(message);
 
     this.tileSelections.set(
@@ -585,6 +593,15 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
       selections: message.selections,
       results: message.results,
     });
+
+    if (
+      previousStatus != null &&
+      previousStatus !== PuzzleStatus.Playing &&
+      message.status === PuzzleStatus.Playing
+    ) {
+      this.sound.gameStarted();
+    }
+
     this.loading.set(false);
     this.errorMessage.set(null);
 
@@ -592,6 +609,8 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
   }
 
   private handleMove(message: PuzzleWsMoveMessage): void {
+    if (message.score != null) this.sound.score();
+
     this.game.update((game) => {
       if (!game) return game;
 
@@ -633,6 +652,8 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
   }
 
   private handleSolved(message: PuzzleWsSolvedMessage): void {
+    if (this.isCurrentPlayerWinner(message.results)) this.sound.victory();
+    else this.sound.complete();
     this.game.update((game) => {
       if (!game) return game;
 
@@ -672,7 +693,18 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
     );
   }
 
+  private isCurrentPlayerWinner(results: Puzzle['results']): boolean {
+    const participantId = this.participantId();
+    if (!participantId || !results.length) return false;
+
+    const highestScore = Math.max(...results.map(({ score }) => score));
+    return results.some(
+      (result) => result.participantId === participantId && result.score === highestScore,
+    );
+  }
+
   private handleTimeout(message: PuzzleWsTimeoutMessage): void {
+    this.sound.timeout();
     this.game.update((game) => {
       if (!game) return game;
 
@@ -794,6 +826,7 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
   }
 
   private handlePlayerJoined(message: WsPlayerJoinedMessage): void {
+    this.sound.joined();
     this.game.update((game) => {
       if (!game) return game;
 
@@ -820,15 +853,22 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
   }
 
   private handleStatus(message: WsStatusMessage): void {
+    const previousStatus = this.game()?.status;
+    const status = message.status as unknown as PuzzleStatus;
+
     this.game.update((game) => {
       if (!game) return game;
 
       return {
         ...game,
-        status: message.status as unknown as PuzzleStatus,
+        status,
         error: message.error ?? '',
       };
     });
+
+    if (status === PuzzleStatus.Playing && previousStatus !== PuzzleStatus.Playing) {
+      this.sound.gameStarted();
+    }
   }
 
   private loadPuzzleImage(game: Puzzle | null): void {
@@ -886,6 +926,7 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
     this.timerInterval = setInterval(() => {
       this.lobbyRemainingMs.update((value) => {
         const next = Math.max(0, value - 1000);
+        this.playCountdownSound(next);
 
         if (next === 0) {
           this.stopTimer();
@@ -902,6 +943,7 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
     this.timerInterval = setInterval(() => {
       this.remainingMs.update((value) => {
         const next = Math.max(0, value - 1000);
+        this.playCountdownSound(next);
 
         if (next === 0) {
           this.stopTimer();

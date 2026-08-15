@@ -4,6 +4,7 @@ import { InvitesService } from '@thenewestera/friends-ng';
 import { PushableNotification } from '@core/models/notification.model';
 import { ToastService } from '@shared/services/toast.service';
 import { NotificationsService } from '@core/services/notifications.service';
+import { SoundService } from '@shared/services/sound.service';
 
 @Injectable({
   providedIn: 'root',
@@ -13,10 +14,12 @@ export class InviteResponseService {
   private readonly notificationsService = inject(NotificationsService);
   private readonly toastService = inject(ToastService);
   private readonly router = inject(Router);
+  private readonly sound = inject(SoundService);
 
   accept(notification: PushableNotification): void {
     this.invitesService.apiInvitesIdAcceptPost(notification.id).subscribe({
       next: ({ playUrl }) => {
+        this.sound.accepted();
         this.clear(notification);
         void this.navigateToGame(playUrl);
       },
@@ -32,9 +35,10 @@ export class InviteResponseService {
 
   decline(notification: PushableNotification): void {
     this.clear(notification);
-    this.invitesService
-      .apiInvitesIdDeclinePost(notification.id)
-      .subscribe({ error: () => undefined });
+    this.invitesService.apiInvitesIdDeclinePost(notification.id).subscribe({
+      next: () => this.sound.declined(),
+      error: () => undefined,
+    });
   }
 
   private clear(notification: PushableNotification): void {

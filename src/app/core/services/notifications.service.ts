@@ -7,6 +7,7 @@ import { Observable, Subject } from 'rxjs';
 import { WS_BASE_URL } from '@core/constants/base-urls.constants';
 import { NotificationSocketMessage, PushableNotification } from '@core/models/notification.model';
 import { UserStateService } from '@core/services/user-state.service';
+import { SoundService } from '@shared/services/sound.service';
 
 const RECONNECT_DELAY_MS = 3000;
 
@@ -32,6 +33,7 @@ const RECONNECT_DELAY_MS = 3000;
 export class NotificationsService {
   private readonly api = inject(NotificationsApi);
   private readonly userState = inject(UserStateService);
+  private readonly sound = inject(SoundService);
 
   private socket: WebSocket | null = null;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
@@ -78,6 +80,7 @@ export class NotificationsService {
         message.notification,
         ...list.filter((n) => n.id !== message.notification.id),
       ]);
+      this.sound.notification();
       this.liveNotification.next(message.notification);
     });
 

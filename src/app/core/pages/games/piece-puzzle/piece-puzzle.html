@@ -61,7 +61,11 @@
                 Invite your friends now. The puzzle starts automatically when the lobby timer ends.
               </p>
 
-              <div class="mt-6 text-6xl font-bold tabular-nums text-primary">
+              <div
+                class="mt-6 text-6xl font-bold tabular-nums"
+                [class.text-primary]="lobbyRemainingMs() > 5000"
+                [class.text-error]="lobbyRemainingMs() <= 5000"
+              >
                 {{ formattedLobbyTime() }}
               </div>
               <p class="mt-1 text-sm text-base-content/60">until the puzzle starts</p>
@@ -296,6 +300,7 @@
 
             <div
               class="ml-auto shrink-0 rounded-box bg-base-200 px-4 py-2 text-2xl font-bold tabular-nums"
+              [class.text-error]="remainingMs() <= 5000"
             >
               {{ formattedRemainingTime() }}
             </div>
