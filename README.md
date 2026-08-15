@@ -61,7 +61,7 @@ An AI-generated image is divided into a configurable grid and shuffled. Players 
 - Generated Angular API clients for the backend services
 - REST for commands and catalog/account data
 - WebSockets for games, presence, and notifications
-- Nginx container runtime and Cloudflare Workers static-asset deployment
+- Cloudflare Workers static-asset deployment
 
 ---
 
