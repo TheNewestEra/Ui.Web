@@ -5,7 +5,7 @@
         <span class="indicator-item status status-error"></span>
       }
 
-      <app-button variant="ghost" size="sm" [iconOnly]="true" leftIcon="bell"/>
+      <app-button variant="ghost" size="sm" [iconOnly]="true" leftIcon="bell" />
     </div>
 
     <div
@@ -44,11 +44,15 @@
             } @else if (isInvite(notification)) {
               <div class="mt-2 flex gap-2">
                 <app-button size="sm" (clicked)="acceptInvite(notification)">Accept</app-button>
-                <app-button size="sm" variant="ghost" (clicked)="declineInvite(notification)">Decline</app-button>
+                <app-button size="sm" variant="ghost" (clicked)="declineInvite(notification)">
+                  Decline
+                </app-button>
               </div>
             } @else {
               <div class="mt-2 flex justify-end">
-                <app-button size="sm" variant="ghost" (clicked)="dismiss(notification)">Dismiss</app-button>
+                <app-button size="sm" variant="ghost" (clicked)="dismiss(notification)">
+                  Dismiss
+                </app-button>
               </div>
             }
           </div>

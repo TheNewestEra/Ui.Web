@@ -1,6 +1,23 @@
-import { Component, DestroyRef, computed, inject, OnDestroy, OnInit, signal, WritableSignal } from '@angular/core';
+import {
+  Component,
+  DestroyRef,
+  computed,
+  inject,
+  OnDestroy,
+  OnInit,
+  signal,
+  WritableSignal,
+} from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
-import { interval, Subscription, map, filter, distinctUntilChanged, finalize, Observable } from 'rxjs';
+import {
+  interval,
+  Subscription,
+  map,
+  filter,
+  distinctUntilChanged,
+  finalize,
+  Observable,
+} from 'rxjs';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import {
   Game,
@@ -62,6 +79,7 @@ import {
   LeaderboardDisplayEntry,
 } from '@core/components/leaderboard/leaderboard';
 import { GameRatingComponent } from '@core/components/game-rating/game-rating';
+import { SelectComponent, SelectOption } from '@shared/components/form/select/select';
 import { SoundService } from '@shared/services/sound.service';
 
 const MAX_VISIBLE_GUESSES = 5;
@@ -81,6 +99,7 @@ const GUESS_VISIBILITY_MS = 8_000;
     FormFieldComponent,
     LeaderboardComponent,
     GameRatingComponent,
+    SelectComponent,
     SuccessAlertComponent,
   ],
   templateUrl: './guess-prompt.html',
@@ -119,6 +138,16 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
   readonly inviteFriends = signal<FriendSummary[]>([]);
   readonly inviteGroups = signal<GroupSummary[]>([]);
   readonly inviteTarget = new FormControl('', { nonNullable: true });
+  readonly inviteOptions = computed<SelectOption[]>(() => [
+    ...this.inviteFriends().map((friend) => ({
+      label: `Friend: ${friend.username}`,
+      value: `friend:${friend.id}`,
+    })),
+    ...this.inviteGroups().map((group) => ({
+      label: `Group: ${group.name}`,
+      value: `group:${group.id}`,
+    })),
+  ]);
   private inviteRecipientsLoaded = false;
 
   readonly participantId = signal<string | null>(null);

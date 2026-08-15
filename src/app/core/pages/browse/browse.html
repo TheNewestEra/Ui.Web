@@ -96,7 +96,9 @@
             </div>
 
             <div card-title class="flex min-w-0 items-center gap-1.5 text-lg">
-              <span class="min-w-0 truncate">{{ entry.theme || 'Untitled ' + kindLabel(entry.kind) }}</span>
+              <span class="min-w-0 truncate">
+                {{ entry.theme || 'Untitled ' + kindLabel(entry.kind) }}
+              </span>
 
               @if (entry.themeGenerated) {
                 <span
@@ -173,25 +175,27 @@
       </div>
 
       <div class="join flex justify-center pt-2">
-        <button
-          type="button"
-          class="join-item btn btn-outline btn-sm"
+        <app-button
+          size="sm"
+          variant="outline"
+          buttonClass="join-item w-24"
           [disabled]="!hasPreviousPage() || loading()"
-          (click)="previousPage()"
+          (clicked)="previousPage()"
         >
           Previous
-        </button>
-        <button type="button" class="join-item btn btn-outline btn-sm pointer-events-none">
+        </app-button>
+        <span class="join-item btn btn-outline btn-sm pointer-events-none min-w-24">
           Page {{ page() }}
-        </button>
-        <button
-          type="button"
-          class="join-item btn btn-outline btn-sm"
+        </span>
+        <app-button
+          size="sm"
+          variant="outline"
+          buttonClass="join-item w-24"
           [disabled]="!hasNextPage() || loading()"
-          (click)="nextPage()"
+          (clicked)="nextPage()"
         >
           Next
-        </button>
+        </app-button>
       </div>
     }
   </section>

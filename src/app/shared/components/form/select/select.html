@@ -1,7 +1,7 @@
 <select
   class="select w-full"
   [value]="value"
-  [disabled]="disabled"
+  [disabled]="disabled || externallyDisabled()"
   (change)="handleChange($event)"
   (blur)="handleBlur()"
 >
