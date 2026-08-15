@@ -634,6 +634,7 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
         ],
       };
     });
+    this.setInviteRecipients(this.inviteFriends(), this.inviteGroups());
   }
 
   private handleRoundReady(message: GameWsRoundReadyMessage): void {
@@ -1252,14 +1253,26 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
       .pipe(finalize(() => this.inviteRecipientsLoading.set(false)))
       .subscribe({
         next: (response) => {
-          this.inviteFriends.set(response.friends);
-          this.inviteGroups.set(response.groups);
+          this.setInviteRecipients(response.friends, response.groups);
         },
         error: () => {
           this.inviteRecipientsLoaded = false;
           this.inviteMessage.set('Unable to load friends and groups.');
         },
       });
+  }
+
+  private setInviteRecipients(friends: FriendSummary[], groups: GroupSummary[]): void {
+    const participantIds = new Set(this.game()?.participants.map(({ id }) => id) ?? []);
+    const participantNames = new Set(
+      this.game()?.participants.map(({ name }) => name.trim().toLocaleLowerCase()) ?? [],
+    );
+    const canInvite = (friend: FriendSummary): boolean =>
+      !participantIds.has(friend.id) &&
+      !participantNames.has(friend.username.trim().toLocaleLowerCase());
+
+    this.inviteFriends.set(friends.filter(canInvite));
+    this.inviteGroups.set(groups.filter((group) => group.members.some(canInvite)));
   }
 
   private rememberAnsweredRound(roundIndex: number): void {
