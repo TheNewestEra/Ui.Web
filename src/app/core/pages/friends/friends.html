@@ -5,14 +5,6 @@
   />
 
   <section class="flex flex-col gap-6">
-    @if (errorMessage()) {
-      <app-error-alert>{{ errorMessage() }}</app-error-alert>
-    }
-
-    @if (successMessage()) {
-      <app-success-alert>{{ successMessage() }}</app-success-alert>
-    }
-
     @if (loading()) {
       <div
         class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]"
@@ -60,6 +52,13 @@
             <div card-subtitle>People you can add to groups and invite directly to games.</div>
 
             <div card-content class="flex flex-col gap-3">
+              @if (friendsFeedback().error) {
+                <app-error-alert>{{ friendsFeedback().error }}</app-error-alert>
+              }
+              @if (friendsFeedback().success) {
+                <app-success-alert>{{ friendsFeedback().success }}</app-success-alert>
+              }
+
               @for (friend of friends(); track friend.id) {
                 <app-friend-person-row [name]="friend.username" [color]="friend.color">
                   <app-button
@@ -84,6 +83,17 @@
             <div card-title>Friend requests</div>
 
             <div card-content class="grid gap-6 lg:grid-cols-2">
+              @if (requestsFeedback().error) {
+                <app-error-alert class="lg:col-span-2">
+                  {{ requestsFeedback().error }}
+                </app-error-alert>
+              }
+              @if (requestsFeedback().success) {
+                <app-success-alert class="lg:col-span-2">
+                  {{ requestsFeedback().success }}
+                </app-success-alert>
+              }
+
               <div class="flex flex-col gap-3">
                 <h3 class="font-semibold">Incoming</h3>
 
@@ -148,6 +158,17 @@
             <div card-subtitle>Create groups to invite several friends at once.</div>
 
             <div card-content class="grid gap-4 lg:grid-cols-2">
+              @if (groupsFeedback().error) {
+                <app-error-alert class="lg:col-span-2">
+                  {{ groupsFeedback().error }}
+                </app-error-alert>
+              }
+              @if (groupsFeedback().success) {
+                <app-success-alert class="lg:col-span-2">
+                  {{ groupsFeedback().success }}
+                </app-success-alert>
+              }
+
               @for (group of groups(); track group.id) {
                 <div class="flex flex-col gap-4 rounded-box border border-base-300 bg-base-100 p-5">
                   <div class="flex items-start justify-between gap-3">
@@ -222,44 +243,6 @@
               }
             </div>
           </app-card>
-
-          <app-card>
-            <div card-title>Game invites</div>
-            <div card-subtitle>Invitations waiting for you.</div>
-
-            <div card-content class="flex flex-col gap-3">
-              @for (invite of invites(); track invite.id) {
-                <app-friend-person-row
-                  [name]="invite.inviterUsername"
-                  [color]="invite.inviterColor"
-                  [subtitle]="
-                    'Invited you to ' +
-                    (invite.kind === 'guess' ? 'Guess the Prompt' : 'Piece Puzzle')
-                  "
-                >
-                  <app-button
-                    size="sm"
-                    [loading]="isActionLoading('accept-invite-' + invite.id)"
-                    (clicked)="acceptInvite(invite.id)"
-                  >
-                    Join
-                  </app-button>
-                  <app-button
-                    size="sm"
-                    variant="ghost"
-                    [loading]="isActionLoading('decline-invite-' + invite.id)"
-                    (clicked)="declineInvite(invite.id)"
-                  >
-                    Decline
-                  </app-button>
-                </app-friend-person-row>
-              } @empty {
-                <p class="rounded-box bg-base-200 p-6 text-center text-base-content/60">
-                  No game invites waiting.
-                </p>
-              }
-            </div>
-          </app-card>
         </div>
 
         <aside class="flex flex-col gap-6 xl:sticky xl:top-6 xl:self-start">
@@ -273,6 +256,14 @@
               (ngSubmit)="sendFriendRequest()"
               class="flex flex-col gap-4"
             >
+              @if (friendRequestError()) {
+                <app-error-alert>{{ friendRequestError() }}</app-error-alert>
+              }
+
+              @if (friendRequestSuccess()) {
+                <app-success-alert>{{ friendRequestSuccess() }}</app-success-alert>
+              }
+
               <app-form-field label="Username" [control]="friendRequestForm.controls.username">
                 <app-input formControlName="username" placeholder="Player username" />
               </app-form-field>
@@ -291,6 +282,14 @@
               (ngSubmit)="createGroup()"
               class="flex flex-col gap-4"
             >
+              @if (createGroupFeedback().error) {
+                <app-error-alert>{{ createGroupFeedback().error }}</app-error-alert>
+              }
+
+              @if (createGroupFeedback().success) {
+                <app-success-alert>{{ createGroupFeedback().success }}</app-success-alert>
+              }
+
               <app-form-field label="Group name" [control]="groupForm.controls.name">
                 <app-input formControlName="name" placeholder="Weekend players" />
               </app-form-field>
