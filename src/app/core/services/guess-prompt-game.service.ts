@@ -1,6 +1,10 @@
-import { Injectable, inject } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { Router } from '@angular/router';
-import { GamesPost202Response, GuessThePromptService } from '@thenewestera/guess-ng';
+import {
+  GamesIdRegeneratePostRequest,
+  GamesPost202Response,
+  GuessThePromptService,
+} from '@thenewestera/guess-ng';
 import { UserStateService } from './user-state.service';
 import { LOCAL_STORAGE_KEYS } from '@core/constants/local-storage-keys.constants';
 import { GameSessionStorageService } from './game-session-storage.service';
@@ -17,21 +21,51 @@ export class GuessPromptGameService {
 
   start(theme: string): Observable<void> {
     return this.guessService
-      .gamesPost({ theme, player: this.createPlayer(), color: this.createColor() })
+      .gamesPost({ theme, player: this.playerPayload.player, color: this.playerPayload.color })
       .pipe(
         tap((response) => this.handleHostJoined(response)),
         map(() => undefined),
       );
   }
 
+  private get playerPayload() {
+    return this.userStateService.isLoggedIn()
+      ? {
+          player: undefined,
+          color: undefined,
+        }
+      : {
+          player: this.userStateService.displayName(),
+          color: this.userStateService.color() ?? undefined,
+        };
+  }
+
+  private executeGameRequest(
+    requestFn: (
+      gameId: string,
+      payload: GamesIdRegeneratePostRequest,
+    ) => Observable<GamesPost202Response>,
+    gameId: string,
+  ): Observable<void> {
+    return requestFn(gameId, this.playerPayload).pipe(
+      tap(() => this.clearParticipantCredentials(gameId)),
+      tap((response) => this.handleHostJoined(response)),
+      map(() => undefined),
+    );
+  }
+
   replay(gameId: string): Observable<void> {
-    return this.guessService
-      .gamesIdReplayPost(gameId, { player: this.createPlayer(), color: this.createColor() })
-      .pipe(
-        tap(() => this.clearParticipantCredentials(gameId)),
-        tap((response) => this.handleHostJoined(response)),
-        map(() => undefined),
-      );
+    return this.executeGameRequest(
+      (id, payload) => this.guessService.gamesIdReplayPost(id, payload),
+      gameId,
+    );
+  }
+
+  regenerate(gameId: string): Observable<void> {
+    return this.executeGameRequest(
+      (id, payload) => this.guessService.gamesIdRegeneratePost(id, payload),
+      gameId,
+    );
   }
 
   private handleHostJoined(response: GamesPost202Response): void {
@@ -40,18 +74,6 @@ export class GuessPromptGameService {
     this.storeParticipant(response.gameId, response.participantId, response.token);
 
     void this.router.navigate(['/games/guess-prompt', response.gameId]);
-  }
-
-  private createPlayer(): string | undefined {
-    if (this.userStateService.user() !== null) return undefined;
-
-    return this.userStateService.displayName();
-  }
-
-  private createColor(): string | undefined {
-    if (this.userStateService.user() !== null) return undefined;
-
-    return this.userStateService.color() ?? undefined;
   }
 
   private storeHostToken(gameId: string, hostToken: string): void {

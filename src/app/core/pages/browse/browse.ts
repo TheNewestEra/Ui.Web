@@ -175,8 +175,10 @@ export class BrowsePage {
   }
 
   filledStars(entry: CatalogEntry): number {
-    return Math.round(entry.averageRating ?? 0);
+    return this.roundToNearestHalf(entry.averageRating ?? 0);
   }
+
+  roundToNearestHalf = (value: number): number => Math.round(value * 2) / 2;
 
   statusLabel(status: CatalogEntry['playStatus']): string {
     switch (status) {
@@ -212,5 +214,13 @@ export class BrowsePage {
       default:
         return 'View results';
     }
+  }
+
+  themeGeneratedTooltip(): string {
+    return "This theme was picked automatically, not typed in by the game's creator.";
+  }
+
+  replayCountLabel(entry: CatalogEntry): string {
+    return `Replayed ${entry.replayCount}×`;
   }
 }

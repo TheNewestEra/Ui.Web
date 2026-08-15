@@ -252,9 +252,24 @@
               emptyMessage="No scores were recorded."
             />
 
-            <app-button [loading]="replaying()" [disabled]="replaying()" (clicked)="replayGame()">
-              Play Again
-            </app-button>
+            <div class="flex flex-wrap items-center justify-center gap-3">
+              <app-button
+                [loading]="replaying()"
+                [disabled]="replaying() || regenerating()"
+                (clicked)="replayGame()"
+              >
+                Play Again
+              </app-button>
+
+              <app-button
+                variant="accent"
+                [loading]="regenerating()"
+                [disabled]="regenerating() || replaying()"
+                (clicked)="regenerateGame()"
+              >
+                New Images
+              </app-button>
+            </div>
           </div>
         </div>
       }

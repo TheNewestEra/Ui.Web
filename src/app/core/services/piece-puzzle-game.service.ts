@@ -2,7 +2,6 @@ import { inject, Injectable } from '@angular/core';
 import { Router } from '@angular/router';
 import {
   PiecePuzzleService,
-  PuzzlesIdRegeneratePostRequest,
   PuzzlesPost202Response,
   PuzzlesPostRequest,
 } from '@thenewestera/puzzle-ng';
@@ -10,20 +9,21 @@ import { LOCAL_STORAGE_KEYS } from '@core/constants/local-storage-keys.constants
 import { UserStateService } from './user-state.service';
 import { GameSessionStorageService } from './game-session-storage.service';
 import { map, Observable, tap } from 'rxjs';
+import { GamesIdRegeneratePostRequest } from '@thenewestera/guess-ng';
 
 @Injectable({ providedIn: 'root' })
 export class PiecePuzzleGameService {
   private readonly api = inject(PiecePuzzleService);
   private readonly router = inject(Router);
-  private readonly userState = inject(UserStateService);
+  private readonly userStateService = inject(UserStateService);
   private readonly storage = inject(GameSessionStorageService);
 
   create(theme: string, gridSize: number): Observable<void> {
     const request: PuzzlesPostRequest = {
       theme,
       gridSize,
-      player: this.userState.isLoggedIn() ? undefined : this.userState.displayName(),
-      color: this.userState.isLoggedIn() ? undefined : (this.userState.color() ?? undefined),
+      player: this.playerPayload.player,
+      color: this.playerPayload.color,
     };
     return this.api.puzzlesPost(request).pipe(
       tap((response) => this.storeHost(response)),
@@ -32,17 +32,44 @@ export class PiecePuzzleGameService {
     );
   }
 
-  replay(gameId: string): Observable<void> {
-    const request: PuzzlesIdRegeneratePostRequest = {
-      player: this.userState.isLoggedIn() ? undefined : this.userState.displayName(),
-      color: this.userState.isLoggedIn() ? undefined : (this.userState.color() ?? undefined),
-    };
+  private get playerPayload() {
+    return this.userStateService.isLoggedIn()
+      ? {
+          player: undefined,
+          color: undefined,
+        }
+      : {
+          player: this.userStateService.displayName(),
+          color: this.userStateService.color() ?? undefined,
+        };
+  }
 
-    return this.api.puzzlesIdReplayPost(gameId, request).pipe(
+  private executeGameRequest(
+    requestFn: (
+      gameId: string,
+      payload: GamesIdRegeneratePostRequest,
+    ) => Observable<PuzzlesPost202Response>,
+    gameId: string,
+  ): Observable<void> {
+    return requestFn(gameId, this.playerPayload).pipe(
       tap(() => this.clear(gameId)),
       tap((response) => this.storeHost(response)),
       tap((response) => void this.router.navigate(['/games/piece-puzzle', response.puzzleId])),
       map(() => undefined),
+    );
+  }
+
+  replay(gameId: string): Observable<void> {
+    return this.executeGameRequest(
+      (id, payload) => this.api.puzzlesIdReplayPost(id, payload),
+      gameId,
+    );
+  }
+
+  regenerate(gameId: string): Observable<void> {
+    return this.executeGameRequest(
+      (id, payload) => this.api.puzzlesIdRegeneratePost(id, payload),
+      gameId,
     );
   }
 

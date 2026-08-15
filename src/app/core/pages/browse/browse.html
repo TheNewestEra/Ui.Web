@@ -95,8 +95,17 @@
               }
             </div>
 
-            <div card-title class="text-lg">
-              {{ entry.theme || 'Untitled ' + kindLabel(entry.kind) }}
+            <div card-title class="flex min-w-0 items-center gap-1.5 text-lg">
+              <span class="min-w-0 truncate">{{ entry.theme || 'Untitled ' + kindLabel(entry.kind) }}</span>
+
+              @if (entry.themeGenerated) {
+                <span
+                  class="badge badge-outline badge-secondary badge-sm shrink-0"
+                  [title]="themeGeneratedTooltip()"
+                >
+                  AI theme
+                </span>
+              }
             </div>
 
             <p card-subtitle class="flex items-center gap-1.5">
@@ -122,19 +131,13 @@
               }
 
               <div class="flex items-center gap-2">
-                <div class="rating rating-sm">
-                  <input
-                    type="radio"
-                    [name]="'rating-' + entry.id"
-                    class="rating-hidden"
-                    disabled
-                    [checked]="filledStars(entry) === 0"
-                  />
-
-                  @for (star of [1, 2, 3, 4, 5]; track star) {
+                <div class="rating rating-half rating-sm">
+                  @for (star of [0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5]; track star) {
                     <div
                       class="mask mask-star-2 bg-warning"
-                      [aria-label]="'rating-' + entry.id"
+                      [class.mask-half-1]="star % 1 !== 0"
+                      [class.mask-half-2]="star % 1 === 0"
+                      [aria-label]="'rating-' + entry.id + '-' + star"
                       [aria-current]="star === filledStars(entry)"
                     ></div>
                   }
@@ -149,10 +152,16 @@
                 </span>
               </div>
 
-              <div>
+              <div class="flex flex-wrap items-center gap-2">
                 <span class="badge" [class]="statusBadgeClass(entry.playStatus)">
                   {{ statusLabel(entry.playStatus) }}
                 </span>
+
+                @if (entry.replayCount > 0) {
+                  <span class="badge badge-outline badge-ghost badge-sm">
+                    {{ replayCountLabel(entry) }}
+                  </span>
+                }
               </div>
 
               <a [href]="entry.playUrl" class="btn btn-primary btn-sm btn-block">

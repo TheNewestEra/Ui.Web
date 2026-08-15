@@ -1,4 +1,13 @@
-import { Component, computed, DestroyRef, inject, OnDestroy, OnInit, signal } from '@angular/core';
+import {
+  Component,
+  computed,
+  DestroyRef,
+  inject,
+  OnDestroy,
+  OnInit,
+  signal,
+  WritableSignal,
+} from '@angular/core';
 import { KeyValuePipe } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import {
@@ -45,7 +54,7 @@ import { LOCAL_STORAGE_KEYS } from '@core/constants/local-storage-keys.constants
 import { PiecePuzzleGameService } from '@core/services/piece-puzzle-game.service';
 import { IconComponent } from '@shared/ui/icon/icon';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
-import { distinctUntilChanged, filter, finalize, map } from 'rxjs';
+import { distinctUntilChanged, filter, finalize, map, Observable } from 'rxjs';
 import {
   ApiInvitesPostRequestKindEnum,
   FriendSummary,
@@ -100,6 +109,7 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
   readonly joining = signal(false);
   readonly starting = signal(false);
   readonly replaying = signal(false);
+  readonly regenerating = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly joinErrorMessage = signal<string | null>(null);
   readonly shareMessage = signal<string | null>(null);
@@ -410,25 +420,41 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
       });
   }
 
-  replayGame(): void {
+  private executeGameResetAction(
+    actionFn: (id: string) => Observable<void>,
+    loadingSignal: WritableSignal<boolean>,
+    defaultErrorMessage: string,
+  ): void {
     const gameId = this.gameId();
 
-    if (!gameId || this.replaying() || !this.gameEnded()) return;
+    if (!gameId || loadingSignal() || !this.gameEnded()) return;
 
-    this.replaying.set(true);
+    loadingSignal.set(true);
     this.errorMessage.set(null);
 
-    this.piecePuzzleGameService
-      .replay(gameId)
-      .pipe(finalize(() => this.replaying.set(false)))
+    actionFn(gameId)
+      .pipe(finalize(() => loadingSignal.set(false)))
       .subscribe({
-        next: (response) => {
-          this.joinOnNextConnection = true;
-        },
         error: (error) => {
-          this.errorMessage.set(error?.error?.error ?? 'Unable to restart the puzzle.');
+          this.errorMessage.set(error?.error?.error ?? defaultErrorMessage);
         },
       });
+  }
+
+  replayGame(): void {
+    this.executeGameResetAction(
+      (id) => this.piecePuzzleGameService.replay(id),
+      this.replaying,
+      'Unable to restart the puzzle.',
+    );
+  }
+
+  regenerateGame(): void {
+    this.executeGameResetAction(
+      (id) => this.piecePuzzleGameService.regenerate(id),
+      this.regenerating,
+      'Unable to regenerate the puzzle.',
+    );
   }
 
   getTilePosition(index: number, gridSize: number): string {
