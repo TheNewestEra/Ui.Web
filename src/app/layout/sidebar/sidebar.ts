@@ -19,7 +19,7 @@ export interface SidebarItem {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SidebarComponent {
-  title = input('Escape AI');
+  title = input('The Newest Era');
 
   items = input<SidebarItem[]>([]);
 

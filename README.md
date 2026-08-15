@@ -71,7 +71,7 @@ Create a production build:
 npm run build
 ```
 
-The compiled browser application is written to `dist/angular-starter/browser`.
+The compiled browser application is written to `dist/the-newest-era/browser`.
 
 ## Test
 

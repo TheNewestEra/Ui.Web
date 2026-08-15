@@ -3,7 +3,7 @@
 	"name": "ui-web",
 	"compatibility_date": "2026-08-09",
 	"assets": {
-		"directory": "dist/angular-starter/browser",
+		"directory": "dist/the-newest-era/browser",
 		"not_found_handling": "single-page-application"
 	},
 	"observability": {
