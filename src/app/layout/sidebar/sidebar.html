@@ -1,6 +1,8 @@
 <aside class="w-72 h-screen bg-base-100 border-r border-base-300 flex flex-col">
   <div class="p-6 border-b border-base-300">
-    <h1 class="text-2xl font-bold">{{ title() }}</h1>
+    <a routerLink="/" class="inline-block" (click)="onItemSelected()">
+      <h1 class="text-2xl font-bold">{{ title() }}</h1>
+    </a>
   </div>
 
   <nav class="flex-1 p-4">
@@ -23,7 +25,12 @@
   </nav>
 
   <div class="border-t border-base-300 p-5">
-    <div class="flex items-center gap-3">
+    <a
+      routerLink="/account"
+      class="flex items-center gap-3 rounded-box p-2 transition-colors hover:bg-base-200"
+      aria-label="Open account"
+      (click)="onItemSelected()"
+    >
       <div class="avatar placeholder">
         <div
           class="rounded-full w-10 flex justify-center items-center"
@@ -38,6 +45,6 @@
 
         <div class="text-sm opacity-70">{{ userState.isLoggedIn() ? 'Player' : 'Guest' }}</div>
       </div>
-    </div>
+    </a>
   </div>
 </aside>
