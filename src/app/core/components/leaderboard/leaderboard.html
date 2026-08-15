@@ -184,25 +184,27 @@
 
     @if (showPagination()) {
       <div class="join flex justify-center">
-        <button
-          type="button"
-          class="join-item btn btn-outline btn-sm"
+        <app-button
+          size="sm"
+          variant="outline"
+          buttonClass="join-item w-24"
           [disabled]="!hasPreviousPage() || loading()"
-          (click)="previousPage()"
+          (clicked)="previousPage()"
         >
           Previous
-        </button>
-        <button type="button" class="join-item btn btn-outline btn-sm pointer-events-none">
+        </app-button>
+        <span class="join-item btn btn-outline btn-sm pointer-events-none min-w-24">
           Page {{ page() }}
-        </button>
-        <button
-          type="button"
-          class="join-item btn btn-outline btn-sm"
+        </span>
+        <app-button
+          size="sm"
+          variant="outline"
+          buttonClass="join-item w-24"
           [disabled]="!hasNextPage() || loading()"
-          (click)="nextPage()"
+          (clicked)="nextPage()"
         >
           Next
-        </button>
+        </app-button>
       </div>
     }
   </div>

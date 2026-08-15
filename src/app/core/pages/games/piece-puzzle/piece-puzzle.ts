@@ -67,6 +67,7 @@ import {
   LeaderboardDisplayEntry,
 } from '@core/components/leaderboard/leaderboard';
 import { GameRatingComponent } from '@core/components/game-rating/game-rating';
+import { SelectComponent, SelectOption } from '@shared/components/form/select/select';
 import { SoundService } from '@shared/services/sound.service';
 
 @Component({
@@ -82,6 +83,7 @@ import { SoundService } from '@shared/services/sound.service';
     KeyValuePipe,
     LeaderboardComponent,
     GameRatingComponent,
+    SelectComponent,
   ],
   templateUrl: './piece-puzzle.html',
   styleUrl: './piece-puzzle.css',
@@ -121,6 +123,16 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
   readonly inviteFriends = signal<FriendSummary[]>([]);
   readonly inviteGroups = signal<GroupSummary[]>([]);
   readonly inviteTarget = new FormControl('', { nonNullable: true });
+  readonly inviteOptions = computed<SelectOption[]>(() => [
+    ...this.inviteFriends().map((friend) => ({
+      label: `Friend: ${friend.username}`,
+      value: `friend:${friend.id}`,
+    })),
+    ...this.inviteGroups().map((group) => ({
+      label: `Group: ${group.name}`,
+      value: `group:${group.id}`,
+    })),
+  ]);
   private inviteRecipientsLoaded = false;
   private joinOnNextConnection = false;
 

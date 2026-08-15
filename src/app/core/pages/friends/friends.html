@@ -217,21 +217,14 @@
                   </div>
 
                   @if (availableFriends(group).length) {
-                    <label class="form-control w-full">
+                    <div class="flex w-full flex-col gap-2">
                       <span class="mb-2 text-sm font-medium">Add a friend</span>
-                      <select
-                        class="select w-full"
-                        #friendSelect
-                        (change)="
-                          addGroupMember(group.id, friendSelect.value); friendSelect.value = ''
-                        "
-                      >
-                        <option value="">Choose a friend</option>
-                        @for (friend of availableFriends(group); track friend.id) {
-                          <option [value]="friend.id">{{ friend.username }}</option>
-                        }
-                      </select>
-                    </label>
+                      <app-select
+                        placeholder="Choose a friend"
+                        [options]="availableFriendOptions(group)"
+                        (changed)="addGroupMember(group.id, $event)"
+                      />
+                    </div>
                   }
                 </div>
               } @empty {

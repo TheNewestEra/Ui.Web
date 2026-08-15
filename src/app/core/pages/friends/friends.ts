@@ -21,6 +21,7 @@ import { FriendPersonRowComponent } from '@core/components/friend-person-row/fri
 import { SuccessAlertComponent } from '@shared/components/alert/success/success';
 import { SoundService } from '@shared/services/sound.service';
 import { UserStateService } from '@core/services/user-state.service';
+import { SelectOption, SelectComponent } from '@shared/components/form/select/select';
 
 interface ActionFeedback {
   error: string | null;
@@ -42,6 +43,7 @@ interface ActionFeedback {
     IconComponent,
     FriendPersonRowComponent,
     SuccessAlertComponent,
+    SelectComponent,
   ],
   templateUrl: './friends.html',
   styleUrl: './friends.css',
@@ -225,6 +227,13 @@ export class FriendsPage {
     const memberIds = new Set(group.members.map((member) => member.id));
 
     return this.friends().filter((friend) => !memberIds.has(friend.id));
+  }
+
+  availableFriendOptions(group: GroupSummary): SelectOption[] {
+    return this.availableFriends(group).map((friend) => ({
+      label: friend.username,
+      value: friend.id,
+    }));
   }
 
   isActionLoading(key: string): boolean {

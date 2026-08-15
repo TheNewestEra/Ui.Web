@@ -17,7 +17,7 @@ export class ButtonComponent {
     'primary',
   );
 
-  size = input<'sm' | 'md' | 'lg'>('md');
+  size = input<'xs' | 'sm' | 'md' | 'lg'>('md');
 
   loading = input(false);
 
@@ -34,8 +34,12 @@ export class ButtonComponent {
   active = input(false);
   ariaLabel = input<string>();
   title = input<string>();
+  unstyled = input(false);
+  buttonClass = input('');
 
   classes = computed(() => {
+    if (this.unstyled()) return this.buttonClass();
+
     const variantClasses = {
       primary: 'btn-primary',
       secondary: 'btn-secondary',
@@ -54,6 +58,7 @@ export class ButtonComponent {
       this.loading() && 'loading',
       this.fullWidth() && 'w-full justify-start',
       this.active() && 'btn-active',
+      this.buttonClass(),
     ]
       .filter(Boolean)
       .join(' ');

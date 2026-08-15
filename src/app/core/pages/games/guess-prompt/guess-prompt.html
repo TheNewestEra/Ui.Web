@@ -134,38 +134,19 @@
                 </app-button>
 
                 @if (isLoggedIn()) {
-                  <select
-                    class="select min-w-48"
+                  <app-select
+                    class="min-w-48"
                     [formControl]="inviteTarget"
                     [disabled]="inviteRecipientsLoading() || inviteLoading()"
-                    aria-label="Friend or group to invite"
-                  >
-                    <option value="">
-                      {{
-                        inviteRecipientsLoading() ? 'Loading friends…' : 'Choose friend or group'
-                      }}
-                    </option>
-
-                    @if (inviteFriends().length) {
-                      <optgroup label="Friends">
-                        @for (friend of inviteFriends(); track friend.id) {
-                          <option [value]="'friend:' + friend.id">{{ friend.username }}</option>
-                        }
-                      </optgroup>
-                    }
-
-                    @if (inviteGroups().length) {
-                      <optgroup label="Groups">
-                        @for (group of inviteGroups(); track group.id) {
-                          <option [value]="'group:' + group.id">{{ group.name }}</option>
-                        }
-                      </optgroup>
-                    }
-                  </select>
+                    [options]="inviteOptions()"
+                    [placeholder]="
+                      inviteRecipientsLoading() ? 'Loading friends…' : 'Choose friend or group'
+                    "
+                  />
 
                   <app-button
                     type="button"
-                    variant="secondary"
+                    variant="accent"
                     leftIcon="users"
                     [loading]="inviteLoading()"
                     [disabled]="!inviteTarget.value || inviteRecipientsLoading()"
@@ -208,25 +189,27 @@
             </div>
 
             <div class="join flex justify-center">
-              <button
-                type="button"
-                class="join-item btn btn-outline btn-sm"
+              <app-button
+                size="sm"
+                variant="outline"
+                buttonClass="join-item w-24"
                 [disabled]="!canViewPreviousResultRound()"
-                (click)="previousResultRound()"
+                (clicked)="previousResultRound()"
               >
                 Previous
-              </button>
-              <button type="button" class="join-item btn btn-outline btn-sm pointer-events-none">
+              </app-button>
+              <span class="join-item btn btn-outline btn-sm pointer-events-none min-w-36">
                 Round {{ resultRoundIndex() + 1 }} of {{ game.rounds.length }}
-              </button>
-              <button
-                type="button"
-                class="join-item btn btn-outline btn-sm"
+              </span>
+              <app-button
+                size="sm"
+                variant="outline"
+                buttonClass="join-item w-24"
                 [disabled]="!canViewNextResultRound()"
-                (click)="nextResultRound()"
+                (clicked)="nextResultRound()"
               >
                 Next
-              </button>
+              </app-button>
             </div>
           </div>
 
