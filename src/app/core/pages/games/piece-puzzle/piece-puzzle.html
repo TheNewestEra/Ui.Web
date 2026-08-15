@@ -124,18 +124,13 @@
 
             @if (game.participants.length) {
               <div class="border-b border-base-300 px-6 py-5">
-                <p class="mb-3 text-sm font-semibold text-base-content/60">Players in this game</p>
-                <div class="flex flex-wrap gap-3">
-                  @for (participant of game.participants; track $index) {
-                    <div class="flex items-center gap-2 rounded-box bg-base-200 px-3 py-2">
-                      <span
-                        class="size-3 rounded-full ring-2 ring-base-300"
-                        [style.background-color]="participant.color"
-                      ></span>
-                      <span class="font-medium">{{ participant.name }}</span>
-                    </div>
-                  }
-                </div>
+                <app-participant-list
+                  [participants]="game.participants"
+                  [currentId]="participantId()"
+                  [currentName]="joinedPlayerName()"
+                  heading="Players in this game"
+                  variant="chips"
+                />
               </div>
             }
 
@@ -281,25 +276,11 @@
               </p>
             </div>
 
-            <div class="rounded-box border border-base-300 p-4">
-              <p class="mb-3 text-sm font-semibold text-base-content/60">Participants</p>
-              <div class="flex flex-col gap-2">
-                @for (participant of game.participants; track participant.id) {
-                  <div class="flex items-center gap-2 rounded-box bg-base-200 px-3 py-2">
-                    <span
-                      class="size-3 rounded-full"
-                      [style.background-color]="participant.color"
-                    ></span>
-                    <span class="font-medium">{{ participant.name }}</span>
-                    @if (
-                      participant.id === participantId() || participant.name === joinedPlayerName()
-                    ) {
-                      <span class="badge badge-primary badge-sm ml-auto">You</span>
-                    }
-                  </div>
-                }
-              </div>
-            </div>
+            <app-participant-list
+              [participants]="game.participants"
+              [currentId]="participantId()"
+              [currentName]="joinedPlayerName()"
+            />
 
             @if (hasJoined()) {
               <app-game-rating [gameType]="'puzzle'" [gameId]="game.id" />
@@ -445,41 +426,12 @@
                 />
               }
 
-              <div class="rounded-box border border-base-300 p-4">
-                <p class="mb-3 text-sm font-semibold text-base-content/60">Participants</p>
-                <div class="flex flex-col gap-2">
-                  @for (participant of game.participants; track participant.id) {
-                    <div
-                      class="flex flex-wrap items-center gap-2 rounded-box bg-base-200 px-3 py-2"
-                    >
-                      <span
-                        class="size-3 shrink-0 rounded-full ring-2 ring-base-300"
-                        [style.background-color]="participant.color"
-                      ></span>
-                      <span class="font-medium">{{ participant.name }}</span>
-                      @if (
-                        participant.id === participantId() ||
-                        participant.name === joinedPlayerName()
-                      ) {
-                        <span class="badge badge-primary badge-sm ml-auto">You</span>
-                      }
-                      @if (lastMoves().get(participant.name); as move) {
-                        <span class="w-full pl-5 text-xs text-base-content/60">
-                          Moved tiles {{ move.cellA + 1 }} and {{ move.cellB + 1 }}
-                        </span>
-                      } @else if (tileSelections(); as selections) {
-                        @for (selection of selections | keyvalue; track selection.key) {
-                          @if (selection.value.player === participant.name) {
-                            <span class="w-full pl-5 text-xs text-base-content/60">
-                              Selected tile {{ selection.key + 1 }}
-                            </span>
-                          }
-                        }
-                      }
-                    </div>
-                  }
-                </div>
-              </div>
+              <app-participant-list
+                [participants]="game.participants"
+                [currentId]="participantId()"
+                [currentName]="joinedPlayerName()"
+                [activity]="participantActivity()"
+              />
             </div>
           </div>
         </div>
