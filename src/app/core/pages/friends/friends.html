@@ -14,7 +14,11 @@
     }
 
     @if (loading()) {
-      <div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]" aria-busy="true" aria-label="Loading friends">
+      <div
+        class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]"
+        aria-busy="true"
+        aria-label="Loading friends"
+      >
         <div class="flex min-w-0 flex-col gap-6">
           @for (_ of [1, 2, 3]; track $index) {
             <app-card>
@@ -173,7 +177,8 @@
                           <span
                             class="flex size-8 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white ring-2 ring-base-300"
                             [style.background-color]="member.color"
-                          >{{ member.username.trim().charAt(0).toUpperCase() }}</span>
+                            >{{ member.username.trim().charAt(0).toUpperCase() }}</span
+                          >
                           <span class="truncate font-medium">{{ member.username }}</span>
                         </div>
                         <app-button
