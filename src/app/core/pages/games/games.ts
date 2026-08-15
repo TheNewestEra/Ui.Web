@@ -52,10 +52,73 @@ export class GamesPage {
     },
   ];
 
+  readonly puzzleTimeLimits: SelectOption[] = [
+    {
+      label: '1 minute',
+      value: '60',
+    },
+    {
+      label: '2 minutes',
+      value: '120',
+    },
+    {
+      label: '3 minutes',
+      value: '180',
+    },
+    {
+      label: '5 minutes',
+      value: '300',
+    },
+    {
+      label: '10 minutes',
+      value: '600',
+    },
+  ];
+
+  readonly roundCounts: SelectOption[] = [
+    {
+      label: '3 rounds',
+      value: '3',
+    },
+    {
+      label: '5 rounds',
+      value: '5',
+    },
+    {
+      label: '8 rounds',
+      value: '8',
+    },
+  ];
+
+  readonly roundTimeLimits: SelectOption[] = [
+    {
+      label: '15 seconds',
+      value: '15',
+    },
+    {
+      label: '30 seconds',
+      value: '30',
+    },
+    {
+      label: '45 seconds',
+      value: '45',
+    },
+    {
+      label: '60 seconds',
+      value: '60',
+    },
+    {
+      label: '90 seconds',
+      value: '90',
+    },
+  ];
+
   readonly guessLoading = signal(false);
   readonly guessErrorMessage = signal<string | null>(null);
   readonly guessForm = this.fb.nonNullable.group({
     theme: [''],
+    roundCount: ['5', Validators.required],
+    roundTimeLimitSeconds: ['45', Validators.required],
   });
 
   readonly piecePuzzleLoading = signal(false);
@@ -63,6 +126,7 @@ export class GamesPage {
   readonly piecePuzzleForm = this.fb.nonNullable.group({
     theme: [''],
     gridSize: ['3', Validators.required],
+    timeLimitSeconds: ['180', Validators.required],
   });
 
   guessPrompt(): void {
@@ -73,13 +137,13 @@ export class GamesPage {
       return;
     }
 
-    const { theme } = this.guessForm.getRawValue();
+    const { theme, roundCount, roundTimeLimitSeconds } = this.guessForm.getRawValue();
 
     this.guessLoading.set(true);
     this.guessErrorMessage.set(null);
 
     this.guessPromptGameService
-      .start(theme)
+      .start(theme, Number(roundCount), Number(roundTimeLimitSeconds))
       .pipe(
         finalize(() => {
           this.guessLoading.set(false);
@@ -102,13 +166,13 @@ export class GamesPage {
       return;
     }
 
-    const { theme, gridSize } = this.piecePuzzleForm.getRawValue();
+    const { theme, gridSize, timeLimitSeconds } = this.piecePuzzleForm.getRawValue();
 
     this.piecePuzzleLoading.set(true);
     this.piecePuzzleErrorMessage.set(null);
 
     this.piecePuzzleGameService
-      .create(theme, Number(gridSize))
+      .create(theme, Number(gridSize), Number(timeLimitSeconds))
       .pipe(
         finalize(() => {
           this.piecePuzzleLoading.set(false);
