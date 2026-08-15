@@ -234,15 +234,53 @@
 
       @if (game?.status === PuzzleStatus.Solved || game?.status === PuzzleStatus.Timeout) {
         <div class="grid items-start gap-8 py-10 lg:grid-cols-2">
-          <div class="aspect-square w-full overflow-hidden rounded-box">
-            @if (puzzleImage(); as image) {
-              <img
-                [src]="image"
-                alt="Completed puzzle"
-                class="aspect-square w-full rounded-box object-cover"
-              />
-            } @else {
-              <div class="skeleton aspect-square w-full rounded-box"></div>
+          <div class="flex min-w-0 flex-col gap-4">
+            <div class="aspect-square w-full overflow-hidden rounded-box bg-base-200">
+              @if (puzzleImage(); as image) {
+                @if (game.status === PuzzleStatus.Solved || timeoutResultPage() === 0) {
+                  <img
+                    [src]="image"
+                    alt="Completed puzzle"
+                    class="aspect-square w-full rounded-box object-cover"
+                  />
+                } @else {
+                  <div
+                    class="grid aspect-square w-full overflow-hidden rounded-box"
+                    [style.grid-template-columns]="'repeat(' + game.gridSize + ', 1fr)'"
+                    aria-label="Unfinished puzzle at timeout"
+                  >
+                    @for (tile of game.board; track $index) {
+                      <div class="relative aspect-square overflow-hidden border border-base-300">
+                        <span
+                          class="absolute inset-0 bg-cover"
+                          [style.background-image]="'url(' + image + ')'"
+                          [style.background-size]="
+                            game.gridSize * 100 + '% ' + game.gridSize * 100 + '%'
+                          "
+                          [style.background-position]="getTilePosition(tile, game.gridSize)"
+                        ></span>
+                      </div>
+                    }
+                  </div>
+                }
+              } @else {
+                <div class="skeleton aspect-square w-full rounded-box"></div>
+              }
+            </div>
+
+            @if (game.status === PuzzleStatus.Timeout) {
+              <div class="join flex justify-center">
+                <app-button size="sm" variant="outline" (click)="previousTimeoutResult()">
+                  Previous
+                </app-button>
+                <app-button size="sm" variant="outline" class="pointer-events-none">
+                  {{ timeoutResultPage() === 0 ? 'Final picture' : 'Unfinished puzzle' }}
+                  ({{ timeoutResultPage() + 1 }} of 2)
+                </app-button>
+                <app-button size="sm" variant="outline" (click)="nextTimeoutResult()">
+                  Next
+                </app-button>
+              </div>
             }
           </div>
 
