@@ -18,10 +18,11 @@ export class PiecePuzzleGameService {
   private readonly userStateService = inject(UserStateService);
   private readonly storage = inject(GameSessionStorageService);
 
-  create(theme: string, gridSize: number): Observable<void> {
+  create(theme: string, gridSize: number, timeLimitSeconds?: number): Observable<void> {
     const request: PuzzlesPostRequest = {
       theme,
       gridSize,
+      timeLimitSeconds,
       player: this.playerPayload.player,
       color: this.playerPayload.color,
     };

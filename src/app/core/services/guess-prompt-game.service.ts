@@ -19,9 +19,15 @@ export class GuessPromptGameService {
   private readonly userStateService = inject(UserStateService);
   private readonly storage = inject(GameSessionStorageService);
 
-  start(theme: string): Observable<void> {
+  start(theme: string, roundCount?: number, roundTimeLimitSeconds?: number): Observable<void> {
     return this.guessService
-      .gamesPost({ theme, player: this.playerPayload.player, color: this.playerPayload.color })
+      .gamesPost({
+        theme,
+        roundCount,
+        roundTimeLimitSeconds,
+        player: this.playerPayload.player,
+        color: this.playerPayload.color,
+      })
       .pipe(
         tap((response) => this.handleHostJoined(response)),
         map(() => undefined),
