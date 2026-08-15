@@ -5,14 +5,17 @@
       [class.border-l-4]="!!toast.actions?.length"
       [class.border-l-primary]="!!toast.actions?.length"
     >
-      <button
-        type="button"
-        class="btn btn-ghost btn-xs btn-circle absolute top-2 right-2"
-        aria-label="Dismiss"
-        (click)="toastService.dismiss(toast.id)"
-      >
-        <app-icon name="circle-x" class="size-4"/>
-      </button>
+      <app-button
+        class="absolute top-2 right-2"
+        [unstyled]="true"
+        variant="ghost"
+        size="xs"
+        buttonClass="btn-circle"
+        [iconOnly]="true"
+        leftIcon="circle-x"
+        ariaLabel="Dismiss"
+        (clicked)="toastService.dismiss(toast.id)"
+      />
 
       <div class="flex flex-col gap-1 pr-6">
         <p class="font-semibold leading-snug">{{ toast.title }}</p>

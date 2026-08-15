@@ -8,7 +8,6 @@ import {
   signal,
   WritableSignal,
 } from '@angular/core';
-import { KeyValuePipe } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import {
   PiecePuzzleService,
@@ -67,6 +66,9 @@ import {
   LeaderboardDisplayEntry,
 } from '@core/components/leaderboard/leaderboard';
 import { GameRatingComponent } from '@core/components/game-rating/game-rating';
+import { SelectComponent, SelectOption } from '@shared/components/form/select/select';
+import { SoundService } from '@shared/services/sound.service';
+import { ParticipantListComponent } from '@core/components/participant-list/participant-list';
 
 @Component({
   selector: 'app-piece-puzzle',
@@ -78,9 +80,10 @@ import { GameRatingComponent } from '@core/components/game-rating/game-rating';
     ButtonComponent,
     IconComponent,
     ReactiveFormsModule,
-    KeyValuePipe,
     LeaderboardComponent,
     GameRatingComponent,
+    SelectComponent,
+    ParticipantListComponent,
   ],
   templateUrl: './piece-puzzle.html',
   styleUrl: './piece-puzzle.css',
@@ -94,6 +97,7 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
   private readonly friendsService = inject(FriendsService);
   private readonly invitesService = inject(InvitesService);
   readonly userState = inject(UserStateService);
+  private readonly sound = inject(SoundService);
 
   readonly PuzzleStatus = PuzzleStatus;
   readonly isLoggedIn = this.userState.isLoggedIn;
@@ -119,6 +123,16 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
   readonly inviteFriends = signal<FriendSummary[]>([]);
   readonly inviteGroups = signal<GroupSummary[]>([]);
   readonly inviteTarget = new FormControl('', { nonNullable: true });
+  readonly inviteOptions = computed<SelectOption[]>(() => [
+    ...this.inviteFriends().map((friend) => ({
+      label: `Friend: ${friend.username}`,
+      value: `friend:${friend.id}`,
+    })),
+    ...this.inviteGroups().map((group) => ({
+      label: `Group: ${group.name}`,
+      value: `group:${group.id}`,
+    })),
+  ]);
   private inviteRecipientsLoaded = false;
   private joinOnNextConnection = false;
 
@@ -127,6 +141,7 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
   readonly joinedPlayerName = signal<string | null>(null);
   readonly moving = signal(false);
   readonly solved = signal(false);
+  readonly timeoutResultPage = signal(0);
 
   readonly tileSelections = signal<ReadonlyMap<number, { player: string; color: string }>>(
     new Map(),
@@ -229,6 +244,25 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
 
   readonly participantColor = computed(() => this.currentParticipant()?.color ?? null);
 
+  readonly participantActivity = computed<Readonly<Record<string, string>>>(() => {
+    const activity: Record<string, string> = {};
+
+    for (const participant of this.game()?.participants ?? []) {
+      const move = this.lastMoves().get(participant.name);
+      if (move) {
+        activity[participant.id] = `Moved tiles ${move.cellA + 1} and ${move.cellB + 1}`;
+        continue;
+      }
+
+      const selection = [...this.tileSelections().entries()].find(
+        ([, selected]) => selected.player === participant.name,
+      );
+      if (selection) activity[participant.id] = `Selected tile ${selection[0] + 1}`;
+    }
+
+    return activity;
+  });
+
   readonly currentPlayerScore = computed(() => {
     const currentParticipant = this.currentParticipant();
     if (!currentParticipant) return 0;
@@ -290,6 +324,7 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
     this.pendingMove = null;
     this.moving.set(false);
     this.solved.set(false);
+    this.timeoutResultPage.set(0);
     this.lobbyRemainingMs.set(0);
     this.remainingMs.set(0);
     this.refreshPlayerIdentity();
@@ -497,6 +532,18 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   }
 
+  previousTimeoutResult(): void {
+    this.timeoutResultPage.update((page) => (page + 1) % 2);
+  }
+
+  nextTimeoutResult(): void {
+    this.timeoutResultPage.update((page) => (page + 1) % 2);
+  }
+
+  private playCountdownSound(milliseconds: number): void {
+    if (milliseconds > 0 && milliseconds <= 5000) this.sound.countdown();
+  }
+
   private handleSocketMessage(message: PuzzleWsMessage): void {
     switch (message.type) {
       case PuzzleWsStateMessageTypeEnum.State:
@@ -554,6 +601,8 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
    * full snapshot and the previous local state might be stale (e.g. this is
    * the very first message after connecting). */
   private handleState(message: PuzzleWsStateMessage): void {
+    const previousStatus = this.game()?.status;
+
     this.updateTimers(message);
 
     this.tileSelections.set(
@@ -585,6 +634,15 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
       selections: message.selections,
       results: message.results,
     });
+
+    if (
+      previousStatus != null &&
+      previousStatus !== PuzzleStatus.Playing &&
+      message.status === PuzzleStatus.Playing
+    ) {
+      this.sound.gameStarted();
+    }
+
     this.loading.set(false);
     this.errorMessage.set(null);
 
@@ -592,6 +650,8 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
   }
 
   private handleMove(message: PuzzleWsMoveMessage): void {
+    if (message.score != null) this.sound.score();
+
     this.game.update((game) => {
       if (!game) return game;
 
@@ -633,6 +693,8 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
   }
 
   private handleSolved(message: PuzzleWsSolvedMessage): void {
+    if (this.isCurrentPlayerWinner(message.results)) this.sound.victory();
+    else this.sound.complete();
     this.game.update((game) => {
       if (!game) return game;
 
@@ -672,7 +734,18 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
     );
   }
 
+  private isCurrentPlayerWinner(results: Puzzle['results']): boolean {
+    const participantId = this.participantId();
+    if (!participantId || !results.length) return false;
+
+    const highestScore = Math.max(...results.map(({ score }) => score));
+    return results.some(
+      (result) => result.participantId === participantId && result.score === highestScore,
+    );
+  }
+
   private handleTimeout(message: PuzzleWsTimeoutMessage): void {
+    this.sound.timeout();
     this.game.update((game) => {
       if (!game) return game;
 
@@ -794,6 +867,7 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
   }
 
   private handlePlayerJoined(message: WsPlayerJoinedMessage): void {
+    this.sound.joined();
     this.game.update((game) => {
       if (!game) return game;
 
@@ -817,18 +891,26 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
         ],
       };
     });
+    this.setInviteRecipients(this.inviteFriends(), this.inviteGroups());
   }
 
   private handleStatus(message: WsStatusMessage): void {
+    const previousStatus = this.game()?.status;
+    const status = message.status as unknown as PuzzleStatus;
+
     this.game.update((game) => {
       if (!game) return game;
 
       return {
         ...game,
-        status: message.status as unknown as PuzzleStatus,
+        status,
         error: message.error ?? '',
       };
     });
+
+    if (status === PuzzleStatus.Playing && previousStatus !== PuzzleStatus.Playing) {
+      this.sound.gameStarted();
+    }
   }
 
   private loadPuzzleImage(game: Puzzle | null): void {
@@ -886,6 +968,7 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
     this.timerInterval = setInterval(() => {
       this.lobbyRemainingMs.update((value) => {
         const next = Math.max(0, value - 1000);
+        this.playCountdownSound(next);
 
         if (next === 0) {
           this.stopTimer();
@@ -902,6 +985,7 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
     this.timerInterval = setInterval(() => {
       this.remainingMs.update((value) => {
         const next = Math.max(0, value - 1000);
+        this.playCountdownSound(next);
 
         if (next === 0) {
           this.stopTimer();
@@ -990,14 +1074,26 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
       .pipe(finalize(() => this.inviteRecipientsLoading.set(false)))
       .subscribe({
         next: (response) => {
-          this.inviteFriends.set(response.friends);
-          this.inviteGroups.set(response.groups);
+          this.setInviteRecipients(response.friends, response.groups);
         },
         error: () => {
           this.inviteRecipientsLoaded = false;
           this.inviteMessage.set('Unable to load friends and groups.');
         },
       });
+  }
+
+  private setInviteRecipients(friends: FriendSummary[], groups: GroupSummary[]): void {
+    const participantIds = new Set(this.game()?.participants.map(({ id }) => id) ?? []);
+    const participantNames = new Set(
+      this.game()?.participants.map(({ name }) => name.trim().toLocaleLowerCase()) ?? [],
+    );
+    const canInvite = (friend: FriendSummary): boolean =>
+      !participantIds.has(friend.id) &&
+      !participantNames.has(friend.username.trim().toLocaleLowerCase());
+
+    this.inviteFriends.set(friends.filter(canInvite));
+    this.inviteGroups.set(groups.filter((group) => group.members.some(canInvite)));
   }
 
   private stopTimer(): void {

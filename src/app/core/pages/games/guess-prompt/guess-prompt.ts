@@ -1,6 +1,23 @@
-import { Component, DestroyRef, computed, inject, OnDestroy, OnInit, signal, WritableSignal } from '@angular/core';
+import {
+  Component,
+  DestroyRef,
+  computed,
+  inject,
+  OnDestroy,
+  OnInit,
+  signal,
+  WritableSignal,
+} from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
-import { interval, Subscription, map, filter, distinctUntilChanged, finalize, Observable } from 'rxjs';
+import {
+  interval,
+  Subscription,
+  map,
+  filter,
+  distinctUntilChanged,
+  finalize,
+  Observable,
+} from 'rxjs';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import {
   Game,
@@ -62,6 +79,9 @@ import {
   LeaderboardDisplayEntry,
 } from '@core/components/leaderboard/leaderboard';
 import { GameRatingComponent } from '@core/components/game-rating/game-rating';
+import { SelectComponent, SelectOption } from '@shared/components/form/select/select';
+import { SoundService } from '@shared/services/sound.service';
+import { ParticipantListComponent } from '@core/components/participant-list/participant-list';
 
 const MAX_VISIBLE_GUESSES = 5;
 const GUESS_VISIBILITY_MS = 8_000;
@@ -80,6 +100,8 @@ const GUESS_VISIBILITY_MS = 8_000;
     FormFieldComponent,
     LeaderboardComponent,
     GameRatingComponent,
+    SelectComponent,
+    ParticipantListComponent,
     SuccessAlertComponent,
   ],
   templateUrl: './guess-prompt.html',
@@ -94,6 +116,7 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
   private readonly friendsService = inject(FriendsService);
   private readonly invitesService = inject(InvitesService);
   private readonly userState = inject(UserStateService);
+  private readonly sound = inject(SoundService);
 
   readonly GameStatus = GameStatus;
   readonly isLoggedIn = this.userState.isLoggedIn;
@@ -117,6 +140,16 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
   readonly inviteFriends = signal<FriendSummary[]>([]);
   readonly inviteGroups = signal<GroupSummary[]>([]);
   readonly inviteTarget = new FormControl('', { nonNullable: true });
+  readonly inviteOptions = computed<SelectOption[]>(() => [
+    ...this.inviteFriends().map((friend) => ({
+      label: `Friend: ${friend.username}`,
+      value: `friend:${friend.id}`,
+    })),
+    ...this.inviteGroups().map((group) => ({
+      label: `Group: ${group.name}`,
+      value: `group:${group.id}`,
+    })),
+  ]);
   private inviteRecipientsLoaded = false;
 
   readonly participantId = signal<string | null>(null);
@@ -425,6 +458,8 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
   /** Direct reply to our own `guess` message (see `submitGuess()`) — the WS
    * equivalent of the old POST /games/{id}/guess response body. */
   private handleGuessResult(message: GameWsGuessResultMessage): void {
+    if (!message.correct) this.sound.incorrect();
+
     this.submitting.set(false);
     this.guessResult.set({
       correct: message.correct,
@@ -474,6 +509,7 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
   }
 
   private handleState(message: GameWsStateMessage): void {
+    const previousStatus = this.game()?.status;
     const previousRound = this.game()?.currentRound;
     const nextRound = message.currentRound;
 
@@ -494,6 +530,15 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
     };
 
     this.game.set(game);
+
+    if (
+      previousStatus != null &&
+      previousStatus !== GameStatus.Playing &&
+      game.status === GameStatus.Playing
+    ) {
+      this.sound.gameStarted();
+    }
+
     this.loading.set(false);
     this.errorMessage.set(null);
 
@@ -526,6 +571,7 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
     // their own OpenAPI component rather than this service's own. Same cast
     // Piece Puzzle's own `handleStatus()` uses for `PuzzleStatus`.
     const status = message.status as unknown as GameStatus;
+    const previousStatus = this.game()?.status;
 
     this.game.update((game) => {
       if (!game) {
@@ -545,11 +591,21 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
         break;
 
       case GameStatus.Playing:
+        if (previousStatus !== GameStatus.Playing) this.sound.gameStarted();
         this.handlePlayingState();
         break;
 
       case GameStatus.Solved:
+        if (this.isCurrentPlayerWinner()) this.sound.victory();
+        else this.sound.complete();
+        this.finishGame();
+        break;
+
       case GameStatus.Timeout:
+        this.sound.timeout();
+        this.finishGame();
+        break;
+
       case GameStatus.Error:
         this.finishGame();
         break;
@@ -568,6 +624,8 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
   }
 
   private handlePlayerJoined(message: WsPlayerJoinedMessage): void {
+    this.sound.joined();
+
     this.game.update((game) => {
       if (!game) return game;
 
@@ -607,6 +665,7 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
         ],
       };
     });
+    this.setInviteRecipients(this.inviteFriends(), this.inviteGroups());
   }
 
   private handleRoundReady(message: GameWsRoundReadyMessage): void {
@@ -674,6 +733,9 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
     // The next round will be activated by its own "active" event.
     // --------------------------------------------------------------------------
     if (message.status === RoundStatus.Complete || message.status === RoundStatus.Timeout) {
+      if (message.status === RoundStatus.Complete) this.sound.roundComplete();
+      else this.sound.timeout();
+
       this.game.update((game) => {
         if (!game) return game;
 
@@ -981,6 +1043,7 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
         const next = Math.max(0, this.lobbyRemainingMs() - 1000);
 
         this.lobbyRemainingMs.set(next);
+        this.playCountdownSound(next);
 
         if (next <= 0) {
           this.stopLobbyTimer();
@@ -1003,6 +1066,7 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
         const next = Math.max(0, this.roundRemainingMs() - 1000);
 
         this.roundRemainingMs.set(next);
+        this.playCountdownSound(next);
 
         if (next <= 0) {
           this.stopRoundTimer();
@@ -1023,6 +1087,7 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
         const next = Math.max(0, this.postRoundRemainingMs() - 1000);
 
         this.postRoundRemainingMs.set(next);
+        this.playCountdownSound(next);
 
         if (next <= 0) this.stopPostRoundTimer();
       });
@@ -1067,6 +1132,17 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
     this.guessForm.reset();
   }
 
+  private isCurrentPlayerWinner(): boolean {
+    const participantId = this.participantId();
+    const results = this.game()?.results ?? [];
+    if (!participantId || !results.length) return false;
+
+    const highestScore = Math.max(...results.map(({ score }) => score));
+    return results.some(
+      (result) => result.participantId === participantId && result.score === highestScore,
+    );
+  }
+
   // ---------------------------------------------------------------------------
   // Timers
   // ---------------------------------------------------------------------------
@@ -1104,12 +1180,17 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   }
 
+  private playCountdownSound(milliseconds: number): void {
+    if (milliseconds > 0 && milliseconds <= 5000) this.sound.countdown();
+  }
+
   private handlePublicGuess(message: GameWsGuessMessage): void {
+    if (message.correct) this.sound.score();
+
     const id = ++this.nextLiveGuessId;
 
     this.liveGuesses.update((guesses) =>
       [
-        ...guesses,
         {
           id,
           index: message.index,
@@ -1120,7 +1201,8 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
           score: message.score,
           guess: message.guess ?? '',
         },
-      ].slice(-MAX_VISIBLE_GUESSES),
+        ...guesses,
+      ].slice(0, MAX_VISIBLE_GUESSES),
     );
 
     const timeout = setTimeout(() => {
@@ -1202,14 +1284,26 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
       .pipe(finalize(() => this.inviteRecipientsLoading.set(false)))
       .subscribe({
         next: (response) => {
-          this.inviteFriends.set(response.friends);
-          this.inviteGroups.set(response.groups);
+          this.setInviteRecipients(response.friends, response.groups);
         },
         error: () => {
           this.inviteRecipientsLoaded = false;
           this.inviteMessage.set('Unable to load friends and groups.');
         },
       });
+  }
+
+  private setInviteRecipients(friends: FriendSummary[], groups: GroupSummary[]): void {
+    const participantIds = new Set(this.game()?.participants.map(({ id }) => id) ?? []);
+    const participantNames = new Set(
+      this.game()?.participants.map(({ name }) => name.trim().toLocaleLowerCase()) ?? [],
+    );
+    const canInvite = (friend: FriendSummary): boolean =>
+      !participantIds.has(friend.id) &&
+      !participantNames.has(friend.username.trim().toLocaleLowerCase());
+
+    this.inviteFriends.set(friends.filter(canInvite));
+    this.inviteGroups.set(groups.filter((group) => group.members.some(canInvite)));
   }
 
   private rememberAnsweredRound(roundIndex: number): void {

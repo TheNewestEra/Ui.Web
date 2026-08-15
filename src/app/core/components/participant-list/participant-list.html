@@ -1,0 +1,28 @@
+<div [class]="variant() === 'list' ? 'rounded-box border border-base-300 p-4' : ''">
+  <p class="mb-3 text-sm font-semibold text-base-content/60">{{ heading() }}</p>
+
+  <div [class]="variant() === 'chips' ? 'flex flex-wrap gap-3' : 'flex flex-col gap-2'">
+    @for (participant of participants(); track participant.id) {
+      <div
+        class="flex flex-wrap items-center gap-2 rounded-box bg-base-200 px-3 py-2"
+        [class.w-full]="variant() === 'list'"
+      >
+        <span
+          class="size-3 shrink-0 rounded-full ring-2 ring-base-300"
+          [style.background-color]="participant.color"
+        ></span>
+        <span class="font-medium">{{ participant.name }}</span>
+
+        @if (isCurrent(participant)) {
+          <span class="badge badge-primary badge-sm" [class.ml-auto]="variant() === 'list'">
+            You
+          </span>
+        }
+
+        @if (activity()[participant.id]; as detail) {
+          <span class="w-full pl-5 text-xs text-base-content/60">{{ detail }}</span>
+        }
+      </div>
+    }
+  </div>
+</div>

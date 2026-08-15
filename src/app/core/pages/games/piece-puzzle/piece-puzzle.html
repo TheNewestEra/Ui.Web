@@ -3,7 +3,13 @@
 
   <section class="flex w-full flex-col gap-5">
     @if (loading()) {
-      <div class="mx-auto w-full max-w-3xl py-8" aria-busy="true" aria-label="Loading puzzle">
+      <div
+        class="grid items-start gap-8 py-8 lg:grid-cols-2"
+        aria-busy="true"
+        aria-label="Loading puzzle"
+      >
+        <div class="skeleton aspect-square w-full rounded-box"></div>
+
         <div class="overflow-hidden rounded-box border border-base-300 bg-base-100 shadow-sm">
           <div class="flex flex-col items-center border-b border-base-300 px-6 py-8">
             <div class="skeleton size-14 rounded-full"></div>
@@ -32,24 +38,58 @@
       <app-error-alert>{{ errorMessage() }}</app-error-alert>
     } @else if (game(); as game) {
       @if (game?.status === PuzzleStatus.Queued || game?.status === PuzzleStatus.Generating) {
-        <div class="mx-auto flex w-full max-w-3xl flex-col gap-6 py-8" aria-busy="true">
-          <div class="text-center">
-            <h2 class="text-xl font-semibold">Generating puzzle</h2>
-            <p class="mt-2 text-base-content/60">The image and board will be ready shortly.</p>
-          </div>
+        <div
+          class="grid items-start gap-8 py-8 lg:grid-cols-2"
+          aria-busy="true"
+          aria-label="Generating puzzle"
+        >
+          <div class="skeleton aspect-square w-full rounded-box"></div>
 
-          <div class="rounded-box border border-base-300 bg-base-100 p-8">
-            <div class="skeleton mx-auto size-14 rounded-full"></div>
-            <div class="skeleton mx-auto mt-5 h-7 w-56"></div>
-            <div class="skeleton mx-auto mt-3 h-4 w-full max-w-md"></div>
-            <div class="skeleton mx-auto mt-2 h-4 w-3/4 max-w-sm"></div>
-            <div class="skeleton mx-auto mt-8 h-12 w-40"></div>
+          <div class="overflow-hidden rounded-box border border-base-300 bg-base-100 shadow-sm">
+            <div class="flex flex-col items-center border-b border-base-300 px-6 py-10 text-center">
+              <div class="mb-4 flex size-14 items-center justify-center rounded-full bg-primary/10">
+                <app-icon name="puzzle" class="size-7 text-primary" />
+              </div>
+              <h2 class="text-3xl font-bold">Generating puzzle</h2>
+              <p class="mt-2 max-w-md text-base-content/60">
+                The image and board will be ready shortly.
+              </p>
+              <div class="skeleton mt-7 h-16 w-40"></div>
+            </div>
+
+            <div class="grid grid-cols-2 divide-x divide-base-300 border-b border-base-300">
+              <div class="p-5">
+                <div class="skeleton mx-auto h-4 w-16"></div>
+                <div class="skeleton mx-auto mt-2 h-8 w-20"></div>
+              </div>
+              <div class="p-5">
+                <div class="skeleton mx-auto h-4 w-20"></div>
+                <div class="skeleton mx-auto mt-2 h-8 w-12"></div>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between gap-4 p-6">
+              <div class="skeleton h-5 w-44"></div>
+              <div class="skeleton h-10 w-28"></div>
+            </div>
           </div>
         </div>
       }
 
       @if (game?.status === PuzzleStatus.Waiting) {
-        <div class="mx-auto w-full max-w-3xl py-8">
+        <div class="grid items-start gap-8 py-8 lg:grid-cols-2">
+          <div class="aspect-square w-full overflow-hidden rounded-box bg-base-200">
+            @if (puzzleImage(); as image) {
+              <img
+                [src]="image"
+                alt="Puzzle preview"
+                class="aspect-square w-full rounded-box object-cover"
+              />
+            } @else {
+              <div class="skeleton aspect-square w-full rounded-box"></div>
+            }
+          </div>
+
           <div class="overflow-hidden rounded-box border border-base-300 bg-base-100 shadow-sm">
             <div class="flex flex-col items-center border-b border-base-300 px-6 py-8 text-center">
               <div class="mb-4 flex size-14 items-center justify-center rounded-full bg-primary/10">
@@ -61,7 +101,11 @@
                 Invite your friends now. The puzzle starts automatically when the lobby timer ends.
               </p>
 
-              <div class="mt-6 text-6xl font-bold tabular-nums text-primary">
+              <div
+                class="mt-6 text-6xl font-bold tabular-nums"
+                [class.text-primary]="lobbyRemainingMs() > 5000"
+                [class.text-error]="lobbyRemainingMs() <= 5000"
+              >
                 {{ formattedLobbyTime() }}
               </div>
               <p class="mt-1 text-sm text-base-content/60">until the puzzle starts</p>
@@ -80,18 +124,13 @@
 
             @if (game.participants.length) {
               <div class="border-b border-base-300 px-6 py-5">
-                <p class="mb-3 text-sm font-semibold text-base-content/60">Players in this game</p>
-                <div class="flex flex-wrap gap-3">
-                  @for (participant of game.participants; track $index) {
-                    <div class="flex items-center gap-2 rounded-box bg-base-200 px-3 py-2">
-                      <span
-                        class="size-3 rounded-full ring-2 ring-base-300"
-                        [style.background-color]="participant.color"
-                      ></span>
-                      <span class="font-medium">{{ participant.name }}</span>
-                    </div>
-                  }
-                </div>
+                <app-participant-list
+                  [participants]="game.participants"
+                  [currentId]="participantId()"
+                  [currentName]="joinedPlayerName()"
+                  heading="Players in this game"
+                  variant="chips"
+                />
               </div>
             }
 
@@ -120,48 +159,23 @@
               </div>
 
               <div class="flex flex-wrap gap-3">
-                <app-button
-                  type="button"
-                  variant="outline"
-                  leftIcon="share-2"
-                  (clicked)="shareGame()"
-                >
+                <app-button variant="outline" leftIcon="share-2" (clicked)="shareGame()">
                   Share game
                 </app-button>
 
                 @if (isLoggedIn()) {
-                  <select
-                    class="select min-w-48"
+                  <app-select
+                    class="min-w-48"
                     [formControl]="inviteTarget"
                     [disabled]="inviteRecipientsLoading() || inviteLoading()"
-                    aria-label="Friend or group to invite"
-                  >
-                    <option value="">
-                      {{
-                        inviteRecipientsLoading() ? 'Loading friends…' : 'Choose friend or group'
-                      }}
-                    </option>
-
-                    @if (inviteFriends().length) {
-                      <optgroup label="Friends">
-                        @for (friend of inviteFriends(); track friend.id) {
-                          <option [value]="'friend:' + friend.id">{{ friend.username }}</option>
-                        }
-                      </optgroup>
-                    }
-
-                    @if (inviteGroups().length) {
-                      <optgroup label="Groups">
-                        @for (group of inviteGroups(); track group.id) {
-                          <option [value]="'group:' + group.id">{{ group.name }}</option>
-                        }
-                      </optgroup>
-                    }
-                  </select>
+                    [options]="inviteOptions()"
+                    [placeholder]="
+                      inviteRecipientsLoading() ? 'Loading friends…' : 'Choose friend or group'
+                    "
+                  />
 
                   <app-button
-                    type="button"
-                    variant="secondary"
+                    variant="accent"
                     leftIcon="users"
                     [loading]="inviteLoading()"
                     [disabled]="!inviteTarget.value || inviteRecipientsLoading()"
@@ -172,13 +186,11 @@
                 }
 
                 @if (!isHost() && !hasJoined()) {
-                  <app-button type="button" [loading]="joining()" (clicked)="joinGame()">
-                    Join game
-                  </app-button>
+                  <app-button [loading]="joining()" (clicked)="joinGame()"> Join game </app-button>
                 }
 
                 @if (isHost()) {
-                  <app-button type="button" [loading]="starting()" (clicked)="startGame()">
+                  <app-button [loading]="starting()" (clicked)="startGame()">
                     Start now
                   </app-button>
                 }
@@ -190,15 +202,63 @@
 
       @if (game?.status === PuzzleStatus.Solved || game?.status === PuzzleStatus.Timeout) {
         <div class="grid items-start gap-8 py-10 lg:grid-cols-2">
-          <div class="aspect-square w-full overflow-hidden rounded-box">
-            @if (puzzleImage(); as image) {
-              <img
-                [src]="image"
-                alt="Completed puzzle"
-                class="aspect-square w-full rounded-box object-cover"
-              />
-            } @else {
-              <div class="skeleton aspect-square w-full rounded-box"></div>
+          <div class="flex min-w-0 flex-col gap-4">
+            <div class="aspect-square w-full overflow-hidden rounded-box bg-base-200">
+              @if (puzzleImage(); as image) {
+                @if (game.status === PuzzleStatus.Solved || timeoutResultPage() === 0) {
+                  <img
+                    [src]="image"
+                    alt="Completed puzzle"
+                    class="aspect-square w-full rounded-box object-cover"
+                  />
+                } @else {
+                  <div
+                    class="grid aspect-square w-full overflow-hidden rounded-box"
+                    [style.grid-template-columns]="'repeat(' + game.gridSize + ', 1fr)'"
+                    aria-label="Unfinished puzzle at timeout"
+                  >
+                    @for (tile of game.board; track $index) {
+                      <div class="relative aspect-square overflow-hidden border border-base-300">
+                        <span
+                          class="absolute inset-0 bg-cover"
+                          [style.background-image]="'url(' + image + ')'"
+                          [style.background-size]="
+                            game.gridSize * 100 + '% ' + game.gridSize * 100 + '%'
+                          "
+                          [style.background-position]="getTilePosition(tile, game.gridSize)"
+                        ></span>
+                      </div>
+                    }
+                  </div>
+                }
+              } @else {
+                <div class="skeleton aspect-square w-full rounded-box"></div>
+              }
+            </div>
+
+            @if (game.status === PuzzleStatus.Timeout) {
+              <div class="join flex justify-center">
+                <app-button
+                  size="sm"
+                  variant="outline"
+                  buttonClass="join-item w-24"
+                  (clicked)="previousTimeoutResult()"
+                >
+                  Previous
+                </app-button>
+                <span class="join-item btn btn-outline btn-sm pointer-events-none min-w-44">
+                  {{ timeoutResultPage() === 0 ? 'Final picture' : 'Unfinished puzzle' }}
+                  ({{ timeoutResultPage() + 1 }} of 2)
+                </span>
+                <app-button
+                  size="sm"
+                  variant="outline"
+                  buttonClass="join-item w-24"
+                  (clicked)="nextTimeoutResult()"
+                >
+                  Next
+                </app-button>
+              </div>
             }
           </div>
 
@@ -216,25 +276,11 @@
               </p>
             </div>
 
-            <div class="rounded-box border border-base-300 p-4">
-              <p class="mb-3 text-sm font-semibold text-base-content/60">Participants</p>
-              <div class="flex flex-col gap-2">
-                @for (participant of game.participants; track participant.id) {
-                  <div class="flex items-center gap-2 rounded-box bg-base-200 px-3 py-2">
-                    <span
-                      class="size-3 rounded-full"
-                      [style.background-color]="participant.color"
-                    ></span>
-                    <span class="font-medium">{{ participant.name }}</span>
-                    @if (
-                      participant.id === participantId() || participant.name === joinedPlayerName()
-                    ) {
-                      <span class="badge badge-primary badge-sm ml-auto">You</span>
-                    }
-                  </div>
-                }
-              </div>
-            </div>
+            <app-participant-list
+              [participants]="game.participants"
+              [currentId]="participantId()"
+              [currentName]="joinedPlayerName()"
+            />
 
             @if (hasJoined()) {
               <app-game-rating [gameType]="'puzzle'" [gameId]="game.id" />
@@ -296,6 +342,7 @@
 
             <div
               class="ml-auto shrink-0 rounded-box bg-base-200 px-4 py-2 text-2xl font-bold tabular-nums"
+              [class.text-error]="remainingMs() <= 5000"
             >
               {{ formattedRemainingTime() }}
             </div>
@@ -315,17 +362,18 @@
                   [style.grid-template-columns]="'repeat(' + game.gridSize + ', 1fr)'"
                 >
                   @for (tile of game.board; track $index) {
-                    <button
-                      type="button"
+                    <app-button
+                      class="relative aspect-square overflow-hidden border-2 border-transparent transition-all duration-150"
+                      [unstyled]="true"
+                      buttonClass="relative size-full disabled:cursor-default"
                       [disabled]="!canMove()"
-                      class="relative aspect-square overflow-hidden border-2 border-transparent transition-all duration-150 disabled:cursor-default"
                       [style.--tw-ring-color]="participantColor()"
                       [class.ring-2]="selectedTile() === $index"
                       [style.border-color]="
                         selectedTile() === $index ? participantColor() : 'transparent'
                       "
                       [class.scale-[0.98]]="selectedTile() === $index"
-                      (click)="selectTile($index)"
+                      (clicked)="selectTile($index)"
                     >
                       <span
                         class="absolute inset-0 bg-cover"
@@ -354,7 +402,7 @@
                           {{ selection.player }}
                         </span>
                       }
-                    </button>
+                    </app-button>
                   }
                 </div>
               } @else {
@@ -378,41 +426,12 @@
                 />
               }
 
-              <div class="rounded-box border border-base-300 p-4">
-                <p class="mb-3 text-sm font-semibold text-base-content/60">Participants</p>
-                <div class="flex flex-col gap-2">
-                  @for (participant of game.participants; track participant.id) {
-                    <div
-                      class="flex flex-wrap items-center gap-2 rounded-box bg-base-200 px-3 py-2"
-                    >
-                      <span
-                        class="size-3 shrink-0 rounded-full ring-2 ring-base-300"
-                        [style.background-color]="participant.color"
-                      ></span>
-                      <span class="font-medium">{{ participant.name }}</span>
-                      @if (
-                        participant.id === participantId() ||
-                        participant.name === joinedPlayerName()
-                      ) {
-                        <span class="badge badge-primary badge-sm ml-auto">You</span>
-                      }
-                      @if (lastMoves().get(participant.name); as move) {
-                        <span class="w-full pl-5 text-xs text-base-content/60">
-                          Moved tiles {{ move.cellA + 1 }} and {{ move.cellB + 1 }}
-                        </span>
-                      } @else if (tileSelections(); as selections) {
-                        @for (selection of selections | keyvalue; track selection.key) {
-                          @if (selection.value.player === participant.name) {
-                            <span class="w-full pl-5 text-xs text-base-content/60">
-                              Selected tile {{ selection.key + 1 }}
-                            </span>
-                          }
-                        }
-                      }
-                    </div>
-                  }
-                </div>
-              </div>
+              <app-participant-list
+                [participants]="game.participants"
+                [currentId]="participantId()"
+                [currentName]="joinedPlayerName()"
+                [activity]="participantActivity()"
+              />
             </div>
           </div>
         </div>

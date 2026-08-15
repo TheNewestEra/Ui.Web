@@ -1,15 +1,12 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal, WritableSignal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
 import {
   ApiFriendsGet200Response,
   FriendRequestSummary,
   FriendSummary,
   FriendsService,
   GroupSummary,
-  InviteSummary,
-  InvitesService,
 } from '@thenewestera/friends-ng';
 import { finalize, Observable } from 'rxjs';
 import { PageLayoutComponent } from '@layout/page-layout/page-layout';
@@ -21,7 +18,15 @@ import { FormFieldComponent } from '@shared/components/form/form-field/form-fiel
 import { ErrorAlertComponent } from '@shared/components/alert/error/error';
 import { IconComponent } from '@shared/ui/icon/icon';
 import { FriendPersonRowComponent } from '@core/components/friend-person-row/friend-person-row';
-import { SuccessAlertComponent } from "@shared/components/alert/success/success";
+import { SuccessAlertComponent } from '@shared/components/alert/success/success';
+import { SoundService } from '@shared/services/sound.service';
+import { UserStateService } from '@core/services/user-state.service';
+import { SelectOption, SelectComponent } from '@shared/components/form/select/select';
+
+interface ActionFeedback {
+  error: string | null;
+  success: string | null;
+}
 
 @Component({
   selector: 'app-friends',
@@ -37,28 +42,32 @@ import { SuccessAlertComponent } from "@shared/components/alert/success/success"
     ErrorAlertComponent,
     IconComponent,
     FriendPersonRowComponent,
-    SuccessAlertComponent
-],
+    SuccessAlertComponent,
+    SelectComponent,
+  ],
   templateUrl: './friends.html',
   styleUrl: './friends.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class FriendsPage {
   private readonly friendsService = inject(FriendsService);
-  private readonly invitesService = inject(InvitesService);
-  private readonly router = inject(Router);
   private readonly fb = inject(FormBuilder);
+  private readonly sound = inject(SoundService);
+  private readonly userState = inject(UserStateService);
 
   readonly friends = signal<FriendSummary[]>([]);
   readonly incomingRequests = signal<FriendRequestSummary[]>([]);
   readonly outgoingRequests = signal<FriendRequestSummary[]>([]);
   readonly groups = signal<GroupSummary[]>([]);
-  readonly invites = signal<InviteSummary[]>([]);
 
   readonly loading = signal(true);
   readonly actionLoading = signal<string | null>(null);
-  readonly errorMessage = signal<string | null>(null);
-  readonly successMessage = signal<string | null>(null);
+  readonly friendRequestError = signal<string | null>(null);
+  readonly friendRequestSuccess = signal<string | null>(null);
+  readonly friendsFeedback = signal<ActionFeedback>({ error: null, success: null });
+  readonly requestsFeedback = signal<ActionFeedback>({ error: null, success: null });
+  readonly groupsFeedback = signal<ActionFeedback>({ error: null, success: null });
+  readonly createGroupFeedback = signal<ActionFeedback>({ error: null, success: null });
 
   readonly friendRequestForm = this.fb.nonNullable.group({
     username: ['', Validators.required],
@@ -74,7 +83,7 @@ export class FriendsPage {
 
   load(): void {
     this.loading.set(true);
-    this.errorMessage.set(null);
+    this.friendsFeedback.set({ error: null, success: null });
 
     this.friendsService
       .apiFriendsGet()
@@ -85,10 +94,9 @@ export class FriendsPage {
           this.incomingRequests.set(response.incomingRequests);
           this.outgoingRequests.set(response.outgoingRequests);
           this.groups.set(response.groups);
-          this.invites.set(response.invites);
-          this.loadPendingInvites();
         },
-        error: (error) => this.handleError(error, 'Unable to load your friends.'),
+        error: (error) =>
+          this.setFeedbackError(this.friendsFeedback, error, 'Unable to load your friends.'),
       });
   }
 
@@ -98,14 +106,38 @@ export class FriendsPage {
       return;
     }
 
-    const { username } = this.friendRequestForm.getRawValue();
+    const username = this.friendRequestForm.controls.username.value.trim();
+    const currentUsername = this.userState.user()?.username.trim();
 
-    this.runAction(
-      'friend-request',
-      this.friendsService.apiFriendsRequestPost({ username }),
-      'Friend request sent.',
-      () => this.friendRequestForm.reset(),
-    );
+    this.friendRequestError.set(null);
+    this.friendRequestSuccess.set(null);
+
+    if (currentUsername?.toLocaleLowerCase() === username.toLocaleLowerCase()) {
+      this.friendRequestError.set(
+        "You can't send a friend request to yourself. Enter another player's username.",
+      );
+      return;
+    }
+
+    if (this.actionLoading()) return;
+
+    this.actionLoading.set('friend-request');
+    this.friendsService
+      .apiFriendsRequestPost({ username })
+      .pipe(finalize(() => this.actionLoading.set(null)))
+      .subscribe({
+        next: () => {
+          this.friendRequestForm.reset();
+          this.friendRequestSuccess.set('Friend request sent.');
+          this.sound.requestSent();
+          this.loadDataAfterAction();
+        },
+        error: (error) => {
+          this.friendRequestError.set(
+            error?.error?.error ?? 'Unable to send the friend request. Please try again.',
+          );
+        },
+      });
   }
 
   acceptRequest(id: string): void {
@@ -113,6 +145,8 @@ export class FriendsPage {
       `accept-${id}`,
       this.friendsService.apiFriendsRequestsIdAcceptPost(id),
       'Friend request accepted.',
+      this.requestsFeedback,
+      () => this.sound.accepted(),
     );
   }
 
@@ -121,6 +155,7 @@ export class FriendsPage {
       `decline-${id}`,
       this.friendsService.apiFriendsRequestsIdDeclinePost(id),
       'Friend request declined.',
+      this.requestsFeedback,
     );
   }
 
@@ -129,6 +164,7 @@ export class FriendsPage {
       `cancel-${id}`,
       this.friendsService.apiFriendsRequestsIdCancelPost(id),
       'Friend request cancelled.',
+      this.requestsFeedback,
     );
   }
 
@@ -137,6 +173,7 @@ export class FriendsPage {
       `remove-friend-${id}`,
       this.friendsService.apiFriendsFriendIdDelete(id),
       'Friend removed.',
+      this.friendsFeedback,
     );
   }
 
@@ -152,6 +189,7 @@ export class FriendsPage {
       'create-group',
       this.friendsService.apiGroupsPost({ name }),
       'Group created.',
+      this.createGroupFeedback,
       () => this.groupForm.reset(),
     );
   }
@@ -163,6 +201,7 @@ export class FriendsPage {
       `add-${groupId}-${friendId}`,
       this.friendsService.apiGroupsIdMembersPost(groupId, { friendId }),
       'Friend added to the group.',
+      this.groupsFeedback,
     );
   }
 
@@ -171,6 +210,7 @@ export class FriendsPage {
       `remove-${groupId}-${friendId}`,
       this.friendsService.apiGroupsIdMembersFriendIdDelete(groupId, friendId),
       'Friend removed from the group.',
+      this.groupsFeedback,
     );
   }
 
@@ -179,30 +219,7 @@ export class FriendsPage {
       `delete-group-${id}`,
       this.friendsService.apiGroupsIdDelete(id),
       'Group deleted.',
-    );
-  }
-
-  acceptInvite(id: string): void {
-    this.actionLoading.set(`accept-invite-${id}`);
-    this.clearMessages();
-
-    this.invitesService
-      .apiInvitesIdAcceptPost(id)
-      .pipe(finalize(() => this.actionLoading.set(null)))
-      .subscribe({
-        next: (response) => {
-          if (/^https?:\/\//.test(response.playUrl)) window.location.assign(response.playUrl);
-          else void this.router.navigateByUrl(response.playUrl);
-        },
-        error: (error) => this.handleError(error, 'Unable to accept the invite.'),
-      });
-  }
-
-  declineInvite(id: string): void {
-    this.runAction(
-      `decline-invite-${id}`,
-      this.invitesService.apiInvitesIdDeclinePost(id),
-      'Invite declined.',
+      this.groupsFeedback,
     );
   }
 
@@ -212,57 +229,58 @@ export class FriendsPage {
     return this.friends().filter((friend) => !memberIds.has(friend.id));
   }
 
-  isActionLoading(key: string): boolean {
-    return this.actionLoading() === key;
+  availableFriendOptions(group: GroupSummary): SelectOption[] {
+    return this.availableFriends(group).map((friend) => ({
+      label: friend.username,
+      value: friend.id,
+    }));
   }
 
-  private loadPendingInvites(): void {
-    this.invitesService.apiInvitesPendingGet().subscribe({
-      next: (response) => this.invites.set(response.invites),
-      error: (error) => this.handleError(error, 'Unable to load game invites.'),
-    });
+  isActionLoading(key: string): boolean {
+    return this.actionLoading() === key;
   }
 
   private runAction(
     key: string,
     request: Observable<unknown>,
     successMessage: string,
+    feedback: WritableSignal<ActionFeedback>,
     onSuccess?: () => void,
   ): void {
     if (this.actionLoading()) return;
 
     this.actionLoading.set(key);
-    this.clearMessages();
+    feedback.set({ error: null, success: null });
 
     request.pipe(finalize(() => this.actionLoading.set(null))).subscribe({
       next: () => {
         onSuccess?.();
-        this.successMessage.set(successMessage);
-        this.loadDataAfterAction();
+        feedback.set({ error: null, success: successMessage });
+        this.loadDataAfterAction(feedback);
       },
-      error: (error) => this.handleError(error, 'Unable to complete that action.'),
+      error: (error) => this.setFeedbackError(feedback, error, 'Unable to complete that action.'),
     });
   }
 
-  private loadDataAfterAction(): void {
+  private loadDataAfterAction(feedback?: WritableSignal<ActionFeedback>): void {
     this.friendsService.apiFriendsGet().subscribe({
       next: (response) => {
         this.friends.set(response.friends);
         this.incomingRequests.set(response.incomingRequests);
         this.outgoingRequests.set(response.outgoingRequests);
         this.groups.set(response.groups);
-        this.invites.set(response.invites);
       },
-      error: (error) => this.handleError(error, 'Unable to refresh your friends.'),
+      error: (error) => {
+        if (feedback) this.setFeedbackError(feedback, error, 'Unable to refresh your friends.');
+      },
     });
   }
 
-  private clearMessages(): void {
-    this.errorMessage.set(null);
-    this.successMessage.set(null);
-  }
-
-  private handleError(error: any, fallback: string): void {
-    this.errorMessage.set(error?.error?.error ?? fallback);
+  private setFeedbackError(
+    feedback: WritableSignal<ActionFeedback>,
+    error: any,
+    fallback: string,
+  ): void {
+    feedback.set({ error: error?.error?.error ?? fallback, success: null });
   }
 }

@@ -11,6 +11,7 @@ import {
 import { InviteResponseService } from '@core/services/invite-response.service';
 import { NotificationsService } from '@core/services/notifications.service';
 import { UserStateService } from '@core/services/user-state.service';
+import { SoundService } from '@shared/services/sound.service';
 
 @Component({
   selector: 'app-notification-center',
@@ -23,6 +24,7 @@ import { UserStateService } from '@core/services/user-state.service';
 export class NotificationCenterComponent {
   private readonly friendsService = inject(FriendsService);
   private readonly inviteResponse = inject(InviteResponseService);
+  private readonly sound = inject(SoundService);
 
   readonly notificationsService = inject(NotificationsService);
   readonly userState = inject(UserStateService);
@@ -59,7 +61,10 @@ export class NotificationCenterComponent {
       .apiFriendsRequestsIdAcceptPost(requestId)
       .pipe(finalize(() => this.actionLoading.set(null)))
       .subscribe({
-        next: () => this.dismiss(notification),
+        next: () => {
+          this.sound.accepted();
+          this.dismiss(notification);
+        },
         error: () => this.dismiss(notification),
       });
   }

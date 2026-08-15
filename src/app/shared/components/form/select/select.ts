@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, forwardRef, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, forwardRef, input, output } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 
 export interface SelectOption {
@@ -25,6 +25,8 @@ export class SelectComponent implements ControlValueAccessor {
   options = input<SelectOption[]>([]);
 
   placeholder = input('Select an option');
+  externallyDisabled = input(false, { alias: 'disabled' });
+  changed = output<string>();
 
   value = '';
 
@@ -56,6 +58,7 @@ export class SelectComponent implements ControlValueAccessor {
     this.value = select.value;
 
     this.onChange(this.value);
+    this.changed.emit(this.value);
   }
 
   handleBlur(): void {
