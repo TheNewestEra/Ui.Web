@@ -1,0 +1,67 @@
+import { Component, input } from '@angular/core';
+import {
+  ArrowRight,
+  Bell,
+  Check,
+  CircleAlert,
+  CircleCheck,
+  CircleUser,
+  CircleX,
+  Copy,
+  Gamepad2,
+  ImageOff,
+  Inbox,
+  Info,
+  LayoutGrid,
+  LucideAngularModule,
+  Menu,
+  Moon,
+  Puzzle,
+  RefreshCw,
+  Share2,
+  Sun,
+  Timer,
+  Trees,
+  Trophy,
+  UserRoundCog,
+  Users,
+} from 'lucide-angular';
+
+const usedIcons = {
+  Bell,
+  CircleAlert,
+  CircleUser,
+  Gamepad2,
+  ImageOff,
+  Inbox,
+  Info,
+  LayoutGrid,
+  Menu,
+  Moon,
+  Puzzle,
+  RefreshCw,
+  Sun,
+  Trees,
+  Trophy,
+  UserRoundCog,
+  Users,
+  Timer,
+  CircleCheck,
+  Copy,
+  ArrowRight,
+  Check,
+  CircleX,
+  Share2,
+};
+
+@Component({
+  selector: 'app-icon',
+  standalone: true,
+  providers: [LucideAngularModule.pick(usedIcons).providers!],
+  imports: [LucideAngularModule],
+  templateUrl: './icon.html',
+  styleUrl: './icon.css',
+})
+export class IconComponent {
+  name = input<string>();
+}

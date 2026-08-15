@@ -1,0 +1,507 @@
+<app-page-layout>
+  <app-page-header title="Guess the Prompt" />
+
+  <section class="w-full flex flex-col gap-2">
+    @if (loading()) {
+      <div class="flex flex-col gap-5 py-1" aria-busy="true" aria-label="Loading game">
+        <div class="flex items-center justify-between">
+          <span class="skeleton h-5 w-32"></span>
+          <span class="skeleton h-10 w-24"></span>
+        </div>
+
+        <div class="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
+          <div class="skeleton aspect-square w-full rounded-box"></div>
+          <div class="flex flex-col gap-6">
+            <div class="rounded-box border border-base-300 bg-base-100 p-6">
+              <div class="skeleton h-7 w-3/4"></div>
+              <div class="skeleton mt-3 h-4 w-full"></div>
+              <div class="skeleton mt-2 h-4 w-2/3"></div>
+              <div class="skeleton mt-8 h-12 w-full"></div>
+              <div class="skeleton mt-4 h-10 w-full"></div>
+            </div>
+
+            <div class="rounded-box border border-base-300 bg-base-100 p-6">
+              <div class="skeleton h-6 w-36"></div>
+              <div class="skeleton mt-5 h-12 w-full"></div>
+              <div class="skeleton mt-3 h-12 w-full"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    } @else if (errorMessage()) {
+      <app-error-alert>
+        {{ errorMessage() }}
+      </app-error-alert>
+    } @else if (game(); as game) {
+      @if (game?.status === GameStatus.Generating || game.status === GameStatus.Queued) {
+        <div class="flex flex-col gap-6 py-8" aria-busy="true">
+          <div class="text-center">
+            <h2 class="text-xl font-semibold">Generating images</h2>
+            <p class="mt-2 text-base-content/60">Almost ready...</p>
+          </div>
+
+          <div class="mx-auto grid w-full max-w-4xl grid-cols-1 gap-6 lg:grid-cols-2">
+            <div class="skeleton aspect-square w-full rounded-box"></div>
+            <div class="rounded-box border border-base-300 bg-base-100 p-6">
+              <div class="skeleton h-7 w-3/4"></div>
+              <div class="skeleton mt-3 h-4 w-full"></div>
+              <div class="skeleton mt-2 h-4 w-2/3"></div>
+              <div class="skeleton mt-8 h-12 w-full"></div>
+              <div class="skeleton mt-4 h-10 w-full"></div>
+            </div>
+          </div>
+        </div>
+      }
+
+      @if (game.status === GameStatus.Waiting) {
+        <div class="mx-auto w-full max-w-3xl py-8">
+          <div class="overflow-hidden rounded-box border border-base-300 bg-base-100 shadow-sm">
+            <div class="flex flex-col items-center border-b border-base-300 px-6 py-8 text-center">
+              <div class="mb-4 flex size-14 items-center justify-center rounded-full bg-primary/10">
+                <app-icon name="users" class="size-7 text-primary" />
+              </div>
+
+              <h2 class="text-3xl font-bold">Waiting for players</h2>
+              <p class="mt-2 max-w-md text-base-content/60">
+                Invite your friends now. The game starts automatically when the lobby timer ends.
+              </p>
+
+              <div
+                class="mt-6 text-6xl font-bold tabular-nums"
+                [class.text-primary]="lobbyRemainingMs() > 5000"
+                [class.text-error]="lobbyRemainingMs() <= 5000"
+              >
+                {{ formattedLobbyTime() }}
+              </div>
+              <p class="mt-1 text-sm text-base-content/60">until the game starts</p>
+            </div>
+
+            <div class="grid grid-cols-2 divide-x divide-base-300 border-b border-base-300">
+              <div class="p-5 text-center">
+                <p class="text-sm text-base-content/60">Rounds</p>
+                <p class="mt-1 text-2xl font-bold">{{ game.rounds.length }}</p>
+              </div>
+              <div class="p-5 text-center">
+                <p class="text-sm text-base-content/60">Connected</p>
+                <p class="mt-1 text-2xl font-bold">{{ game.connectedPlayers }}</p>
+              </div>
+            </div>
+
+            @if (game.participants.length) {
+              <div class="border-b border-base-300 px-6 py-5">
+                <app-participant-list
+                  [participants]="game.participants"
+                  [currentId]="participantId()"
+                  heading="Players in this game"
+                  variant="chips"
+                />
+              </div>
+            }
+
+            <div class="flex flex-col gap-3 p-6 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                @if (hasJoined()) {
+                  <app-success-alert [inline]="true" class="font-medium">
+                    You have joined as a player
+                  </app-success-alert>
+                } @else {
+                  <p class="text-sm text-base-content/60">Join before the timer ends to play.</p>
+                }
+
+                @if (shareMessage()) {
+                  <p class="mt-1 text-sm text-base-content/60">{{ shareMessage() }}</p>
+                }
+
+                @if (inviteMessage()) {
+                  <p class="mt-1 text-sm text-base-content/60">{{ inviteMessage() }}</p>
+                }
+              </div>
+
+              <div class="flex flex-wrap gap-3">
+                <app-button
+                  type="button"
+                  variant="outline"
+                  leftIcon="share-2"
+                  (clicked)="shareGame()"
+                >
+                  Share game
+                </app-button>
+
+                @if (isLoggedIn()) {
+                  <app-select
+                    class="min-w-48"
+                    [formControl]="inviteTarget"
+                    [disabled]="inviteRecipientsLoading() || inviteLoading()"
+                    [options]="inviteOptions()"
+                    [placeholder]="
+                      inviteRecipientsLoading() ? 'Loading friends…' : 'Choose friend or group'
+                    "
+                  />
+
+                  <app-button
+                    type="button"
+                    variant="accent"
+                    leftIcon="users"
+                    [loading]="inviteLoading()"
+                    [disabled]="!inviteTarget.value || inviteRecipientsLoading()"
+                    (clicked)="sendGameInvite()"
+                  >
+                    Invite
+                  </app-button>
+                }
+
+                @if (!hasJoined()) {
+                  <app-button type="button" [loading]="joining()" (clicked)="joinGame()">
+                    Join game
+                  </app-button>
+                }
+
+                @if (isHost()) {
+                  <app-button type="button" variant="primary" (clicked)="startGame()">
+                    Start now
+                  </app-button>
+                }
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+
+      @if (game?.status === GameStatus.Solved || game?.status === GameStatus.Timeout) {
+        <div class="grid items-start gap-8 py-10 lg:grid-cols-2">
+          <div class="flex min-w-0 flex-col gap-4">
+            <div class="relative aspect-square overflow-hidden rounded-box bg-base-200">
+              @if (resultRound()?.imageUrl; as imageUrl) {
+                <img
+                  [src]="imageUrl"
+                  [alt]="'Generated image for round ' + (resultRoundIndex() + 1)"
+                  class="size-full object-cover"
+                />
+              } @else {
+                <div class="skeleton size-full rounded-box"></div>
+              }
+            </div>
+
+            <div class="join flex justify-center">
+              <app-button
+                size="sm"
+                variant="outline"
+                buttonClass="join-item w-24"
+                [disabled]="!canViewPreviousResultRound()"
+                (clicked)="previousResultRound()"
+              >
+                Previous
+              </app-button>
+              <span class="join-item btn btn-outline btn-sm pointer-events-none min-w-36">
+                Round {{ resultRoundIndex() + 1 }} of {{ game.rounds.length }}
+              </span>
+              <app-button
+                size="sm"
+                variant="outline"
+                buttonClass="join-item w-24"
+                [disabled]="!canViewNextResultRound()"
+                (clicked)="nextResultRound()"
+              >
+                Next
+              </app-button>
+            </div>
+          </div>
+
+          <div class="flex min-w-0 flex-col gap-6">
+            <div>
+              <h2 class="text-3xl font-bold">
+                {{ game?.status === GameStatus.Solved ? 'Game Completed' : "Time's Up!" }}
+              </h2>
+              <p class="mt-2 text-base-content/60">
+                {{
+                  game?.status === GameStatus.Solved
+                    ? 'Great game! Here are the final scores.'
+                    : "The game wasn't completed in time."
+                }}
+              </p>
+            </div>
+
+            @if (hasJoined()) {
+              <app-game-rating class="w-full" [gameType]="'guess'" [gameId]="game.id" />
+            }
+
+            <app-leaderboard
+              class="w-full"
+              [entries]="leaderboardEntries()"
+              [currentId]="participantId()"
+              [showHeading]="false"
+              emptyMessage="No scores were recorded."
+            />
+
+            <div class="flex flex-wrap items-center justify-center gap-3">
+              <app-button
+                [loading]="replaying()"
+                [disabled]="replaying() || regenerating()"
+                (clicked)="replayGame()"
+              >
+                Play Again
+              </app-button>
+
+              <app-button
+                variant="accent"
+                [loading]="regenerating()"
+                [disabled]="regenerating() || replaying()"
+                (clicked)="regenerateGame()"
+              >
+                New Images
+              </app-button>
+            </div>
+          </div>
+        </div>
+      }
+
+      @if (game?.status === GameStatus.Error) {
+        <div class="flex flex-col items-center gap-5 py-10 text-center">
+          <h2 class="text-3xl font-bold">Something went wrong!</h2>
+
+          <div>
+            <h2 class="text-2xl font-bold">Please try again.</h2>
+          </div>
+        </div>
+      }
+
+      @if (game?.status === GameStatus.Playing) {
+        <div class="flex flex-col gap-5 py-1">
+          @if (hasJoined()) {
+            <div class="flex flex-row items-center gap-2 rounded-box bg-base-200 px-4 py-3">
+              <span
+                class="size-3 rounded-full ring-2 ring-base-300"
+                [style.background-color]="currentParticipant()?.color"
+              ></span>
+              <span class="text-sm text-base-content/60">Your score</span>
+              <span class="text-xl font-bold tabular-nums">{{ currentPlayerScore() }}</span>
+            </div>
+          }
+          @if (game.postRoundIndex != null) {
+            <div class="flex items-center justify-between">
+              <p class="text-sm text-base-content/60">
+                Round {{ game.postRoundIndex + 1 }} of {{ game.rounds.length }} complete
+              </p>
+
+              <div class="rounded-box bg-base-200 px-4 py-2 text-right">
+                <p class="text-xs text-base-content/60">
+                  {{
+                    game.postRoundIndex + 1 < game.rounds.length
+                      ? 'Next round starts in'
+                      : 'Final results in'
+                  }}
+                </p>
+                <p
+                  class="text-xl font-bold tabular-nums"
+                  [class.text-error]="postRoundRemainingMs() <= 5000"
+                >
+                  {{ formattedPostRoundTime() }}
+                </p>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
+              <div
+                class="relative flex aspect-square w-full items-center justify-center overflow-hidden rounded-box bg-base-200"
+              >
+                @if (displayedRound()?.imageUrl; as imageUrl) {
+                  <div class="skeleton absolute inset-0 rounded-box"></div>
+                  <img
+                    [src]="imageUrl"
+                    alt="Resolved round"
+                    class="relative block h-full w-full object-cover"
+                  />
+                } @else {
+                  <div class="skeleton absolute inset-0 rounded-box"></div>
+                }
+              </div>
+
+              <div class="flex min-w-0 flex-col gap-6">
+                <app-card class="w-full">
+                  <div card-title>Round complete</div>
+                  <div card-subtitle>The correct prompt was</div>
+
+                  <div card-content class="flex flex-col gap-5">
+                    <p class="text-xl font-semibold leading-relaxed">
+                      {{ postRound()?.prompt ?? 'Waiting for the prompt…' }}
+                    </p>
+
+                    <div class="rounded-box bg-base-200 px-5 py-4">
+                      <p class="text-sm text-base-content/60">
+                        {{
+                          game.postRoundIndex + 1 < game.rounds.length
+                            ? 'Get ready for the next round.'
+                            : 'Final results are being prepared.'
+                        }}
+                      </p>
+                    </div>
+                  </div>
+                </app-card>
+
+                <app-leaderboard
+                  class="w-full"
+                  [entries]="leaderboardEntries()"
+                  [currentId]="participantId()"
+                  subtitle="Scores after this round"
+                />
+              </div>
+            </div>
+          } @else if (game.currentRound != null) {
+            <div class="flex items-center justify-between">
+              <p class="text-sm text-base-content/60">
+                Round {{ game.currentRound + 1 }} of {{ game.rounds.length }}
+              </p>
+
+              <div
+                class="rounded-box bg-base-200 px-4 py-2 text-xl font-bold tabular-nums"
+                [class.text-error]="roundRemainingMs() <= 5000"
+              >
+                {{ formattedRoundTime() }}
+              </div>
+            </div>
+
+            @if (isSpectator()) {
+              <div class="rounded-box bg-info/10 p-4 text-info">
+                This game has already started. You are watching as a spectator.
+              </div>
+            }
+
+            <div class="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
+              <div
+                class="relative flex aspect-square w-full items-center justify-center overflow-hidden rounded-box bg-base-200"
+              >
+                @if (displayedRound()?.imageUrl; as imageUrl) {
+                  <div class="skeleton absolute inset-0 rounded-box"></div>
+                  <img
+                    [src]="imageUrl"
+                    alt="Guess the generated image"
+                    class="relative block h-full w-full object-cover"
+                  />
+                } @else {
+                  <div class="skeleton absolute inset-0 rounded-box"></div>
+                }
+              </div>
+
+              <div class="flex min-w-0 flex-col gap-6">
+                @if (!isSpectator()) {
+                  <app-card class="w-full">
+                    <div card-title>What prompt generated this image?</div>
+
+                    <div card-subtitle>
+                      Type your best guess and submit it before the timer runs out.
+                    </div>
+
+                    <div class="flex flex-col gap-4" card-content>
+                      <form
+                        [formGroup]="guessForm"
+                        (ngSubmit)="submitGuess()"
+                        class="flex flex-col gap-4"
+                      >
+                        <app-form-field label="Guess" [control]="guessForm.controls.guess">
+                          <app-input
+                            formControlName="guess"
+                            [readonly]="!canSubmitGuess()"
+                            placeholder="What do you think the image represents?"
+                          />
+                        </app-form-field>
+
+                        <app-button
+                          type="submit"
+                          [loading]="submitting()"
+                          [disabled]="!canSubmitGuess() || guessForm.invalid"
+                        >
+                          Submit Guess
+                        </app-button>
+                      </form>
+
+                      @if (answeredCorrectly()) {
+                        <app-success-alert>
+                          <div>
+                            <p class="font-semibold">Correct!</p>
+                            <p class="text-sm">
+                              You earned {{ guessResult()?.score ?? 0 }} points this round. Your
+                              total score is
+                              {{ guessResult()?.totalScore ?? currentPlayerScore() }}.
+                            </p>
+                            <p class="mt-1 text-sm">Waiting for the other players to finish.</p>
+                          </div>
+                        </app-success-alert>
+                      } @else if (guessResult(); as result) {
+                        <app-error-alert>
+                          <div>
+                            <p class="font-semibold">Not quite.</p>
+                            <p class="text-sm">Keep trying before the timer runs out.</p>
+                          </div>
+                        </app-error-alert>
+                      }
+                    </div>
+                  </app-card>
+                } @else {
+                  <app-leaderboard
+                    class="w-full"
+                    [entries]="leaderboardEntries()"
+                    [currentId]="participantId()"
+                    subtitle="Live scores for this game"
+                  />
+                }
+
+                @if (liveGuesses().length) {
+                  <div class="overflow-hidden rounded-box border border-base-300 bg-base-100">
+                    <p
+                      class="border-b border-base-300 px-4 py-3 text-sm font-semibold text-base-content/60"
+                    >
+                      Live guesses
+                    </p>
+                    <div class="flex flex-col">
+                      @for (guess of liveGuesses(); track guess.id) {
+                        @if (guess.index === game.currentRound) {
+                          <div
+                            class="flex gap-3 border-b border-base-200 px-4 py-3 last:border-b-0"
+                          >
+                            <span
+                              class="mt-1 size-3 shrink-0 rounded-full ring-2 ring-base-300"
+                              [style.background-color]="guess.color"
+                            ></span>
+                            <p class="min-w-0 text-sm">
+                              <span class="font-semibold" [style.color]="guess.color">
+                                {{ guess.player }}
+                              </span>
+                              @if (guess.correct) {
+                                <span class="text-success">
+                                  guessed correctly and earned {{ guess.score ?? 0 }} points!
+                                </span>
+                              } @else {
+                                <span class="text-base-content/70">
+                                  guessed "{{ guess.guess }}"
+                                </span>
+                              }
+                            </p>
+                          </div>
+                        }
+                      }
+                    </div>
+                  </div>
+                }
+
+                <app-participant-list
+                  [participants]="game.participants"
+                  [currentId]="participantId()"
+                />
+              </div>
+            </div>
+          } @else {
+            <div class="grid grid-cols-1 items-start gap-6 lg:grid-cols-2" aria-busy="true">
+              <div class="skeleton aspect-square w-full rounded-box"></div>
+              <div class="rounded-box border border-base-300 bg-base-100 p-6">
+                <div class="skeleton h-7 w-3/4"></div>
+                <div class="skeleton mt-3 h-4 w-full"></div>
+                <div class="skeleton mt-8 h-12 w-full"></div>
+                <div class="skeleton mt-4 h-10 w-full"></div>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    }
+  </section>
+</app-page-layout>

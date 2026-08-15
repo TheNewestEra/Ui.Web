@@ -1,0 +1,92 @@
+<app-page-layout>
+  <app-page-header title="Games" />
+
+  <section class="flex flex-col space-y-6">
+    <app-card>
+      <div card-title>Guess the Prompt</div>
+
+      <p card-subtitle>
+        We generate a few AI images around a theme. Everyone guesses the prompt behind each one.
+      </p>
+
+      <form
+        card-content
+        [formGroup]="guessForm"
+        (ngSubmit)="guessPrompt()"
+        class="flex flex-col space-y-6"
+      >
+        <app-form-field label="Theme" [control]="guessForm.controls.theme">
+          <app-input
+            formControlName="theme"
+            placeholder="Theme (optional) — e.g. “deep sea creatures”"
+          />
+        </app-form-field>
+
+        <app-form-field label="Rounds" [control]="guessForm.controls.roundCount">
+          <app-select formControlName="roundCount" [options]="roundCounts" />
+        </app-form-field>
+
+        <app-form-field
+          label="Round Time"
+          [control]="guessForm.controls.roundTimeLimitSeconds"
+        >
+          <app-select formControlName="roundTimeLimitSeconds" [options]="roundTimeLimits" />
+        </app-form-field>
+
+        @if (guessErrorMessage()) {
+          <app-error-alert>
+            {{ guessErrorMessage() }}
+          </app-error-alert>
+        }
+
+        <app-button type="submit" variant="primary" [loading]="guessLoading()">
+          Start a new game
+        </app-button>
+      </form>
+    </app-card>
+
+    <app-card>
+      <div card-title>Piece Puzzle</div>
+
+      <p card-subtitle>
+        We generate one AI image, scramble it into a grid, and race the clock to put it back
+        together. Share the link — a second player can join the same board in real time.
+      </p>
+
+      <form
+        card-content
+        [formGroup]="piecePuzzleForm"
+        (ngSubmit)="piecePuzzle()"
+        class="flex flex-col space-y-6"
+      >
+        <app-form-field label="Theme" [control]="piecePuzzleForm.controls.theme">
+          <app-input
+            formControlName="theme"
+            placeholder="Theme (optional) — e.g. “deep sea creatures”"
+          />
+        </app-form-field>
+
+        <app-form-field label="Grid Size" [control]="piecePuzzleForm.controls.gridSize">
+          <app-select formControlName="gridSize" [options]="gridSizes" />
+        </app-form-field>
+
+        <app-form-field
+          label="Game Time"
+          [control]="piecePuzzleForm.controls.timeLimitSeconds"
+        >
+          <app-select formControlName="timeLimitSeconds" [options]="puzzleTimeLimits" />
+        </app-form-field>
+
+        @if (piecePuzzleErrorMessage()) {
+          <app-error-alert>
+            {{ piecePuzzleErrorMessage() }}
+          </app-error-alert>
+        }
+
+        <app-button type="submit" variant="primary" [loading]="piecePuzzleLoading()">
+          Start a new puzzle
+        </app-button>
+      </form>
+    </app-card>
+  </section>
+</app-page-layout>

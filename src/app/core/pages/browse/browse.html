@@ -1,0 +1,202 @@
+<app-page-layout>
+  <app-page-header
+    title="Browse Games"
+    subtitle="See what everyone else has been generating — filter by type, sort by rating, and jump in."
+  />
+
+  <section class="flex flex-col space-y-6">
+    <app-card>
+      <div card-title>Game catalog</div>
+      <div card-subtitle>Filter and sort games created by the community.</div>
+
+      <form card-content [formGroup]="filterForm" class="grid gap-4 sm:grid-cols-4">
+        <app-form-field label="Game type" [control]="filterForm.controls.kind">
+          <app-select formControlName="kind" [options]="kindOptions" />
+        </app-form-field>
+
+        <app-form-field label="Sort by" [control]="filterForm.controls.sort">
+          <app-select formControlName="sort" [options]="sortOptions" />
+        </app-form-field>
+
+        <app-form-field label="Game status" [control]="filterForm.controls.playStatus">
+          <app-select formControlName="playStatus" [options]="statusOptions" />
+        </app-form-field>
+
+        <app-form-field label="Created by" [control]="filterForm.controls.scope">
+          <app-select formControlName="scope" [options]="scopeOptions()" />
+        </app-form-field>
+      </form>
+    </app-card>
+
+    @if (errorMessage()) {
+      <app-error-alert>
+        <span>{{ errorMessage() }}</span>
+
+        <app-button variant="ghost" size="sm" leftIcon="refresh-cw" (clicked)="load()">
+          Retry
+        </app-button>
+      </app-error-alert>
+    } @else if (loading()) {
+      <div
+        class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+        aria-busy="true"
+        aria-label="Loading games"
+      >
+        @for (_ of [1, 2, 3, 4, 5, 6, 7, 8]; track $index) {
+          <app-card [compact]="true">
+            <div card-image class="skeleton h-40 w-full rounded-none"></div>
+
+            <div card-title class="skeleton h-6 w-40 max-w-full"></div>
+
+            <div card-subtitle class="skeleton h-4 w-28 max-w-full"></div>
+
+            <div card-content class="flex flex-col gap-4">
+              <div class="flex items-center gap-2">
+                <div class="skeleton size-7 shrink-0 rounded-full"></div>
+                <div class="skeleton h-4 w-2/3"></div>
+              </div>
+              <div class="skeleton h-5 w-2/3"></div>
+              <div class="skeleton h-6 w-24"></div>
+              <div class="skeleton h-8 w-full"></div>
+            </div>
+          </app-card>
+        }
+      </div>
+    } @else if (entries().length === 0) {
+      <div class="flex flex-col items-center gap-3 p-16 text-base-content/60">
+        <app-icon name="inbox" />
+
+        <p>No games found. Try a different filter.</p>
+      </div>
+    } @else {
+      <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        @for (entry of entries(); track entry.id) {
+          <app-card [compact]="true">
+            <div
+              card-image
+              class="relative flex h-40 w-full items-center justify-center bg-base-200 text-base-content/30"
+            >
+              @if (entry.thumbnailUrl) {
+                @if (!isImageLoaded(entry.id)) {
+                  <div class="skeleton absolute inset-0 h-40 w-full rounded-none"></div>
+                }
+
+                <img
+                  [src]="entry.thumbnailUrl"
+                  [alt]="entry.theme ?? kindLabel(entry.kind)"
+                  loading="lazy"
+                  class="h-40 w-full object-cover"
+                  [class.invisible]="!isImageLoaded(entry.id)"
+                  (load)="onImageLoad(entry.id)"
+                  (error)="onImageLoad(entry.id)"
+                />
+              } @else {
+                <app-icon name="image-off" />
+              }
+            </div>
+
+            <div card-title class="flex min-w-0 items-center gap-1.5 text-lg">
+              <span class="min-w-0 truncate">
+                {{ entry.theme || 'Untitled ' + kindLabel(entry.kind) }}
+              </span>
+
+              @if (entry.themeGenerated) {
+                <span
+                  class="badge badge-outline badge-secondary badge-sm shrink-0"
+                  [title]="themeGeneratedTooltip()"
+                >
+                  AI theme
+                </span>
+              }
+            </div>
+
+            <p card-subtitle class="flex items-center gap-1.5">
+              <app-icon [name]="kindIcon(entry.kind)" />
+              {{ kindLabel(entry.kind) }}
+            </p>
+
+            <div card-content class="flex flex-col gap-3">
+              @if (entry.creator; as creator) {
+                <div class="flex min-w-0 items-center gap-2 text-sm">
+                  <span
+                    class="flex size-7 shrink-0 items-center justify-center rounded-full font-semibold text-white"
+                    [style.background-color]="creator.color"
+                  >
+                    {{ creator.name.trim().charAt(0).toUpperCase() }}
+                  </span>
+
+                  <span class="truncate text-base-content/60">
+                    Created by
+                    <span class="font-medium text-base-content">{{ creator.name }}</span>
+                  </span>
+                </div>
+              }
+
+              <div class="flex items-center gap-2">
+                <div class="rating rating-half rating-sm">
+                  @for (star of [0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5]; track star) {
+                    <div
+                      class="mask mask-star-2 bg-warning"
+                      [class.mask-half-1]="star % 1 !== 0"
+                      [class.mask-half-2]="star % 1 === 0"
+                      [aria-label]="'rating-' + entry.id + '-' + star"
+                      [aria-current]="star === filledStars(entry)"
+                    ></div>
+                  }
+                </div>
+
+                <span class="text-sm text-base-content/60">
+                  @if (entry.ratingCount > 0) {
+                    {{ entry.averageRating | number: '1.1-1' }} ({{ entry.ratingCount }})
+                  } @else {
+                    No ratings yet
+                  }
+                </span>
+              </div>
+
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="badge" [class]="statusBadgeClass(entry.playStatus)">
+                  {{ statusLabel(entry.playStatus) }}
+                </span>
+
+                @if (entry.replayCount > 0) {
+                  <span class="badge badge-outline badge-ghost badge-sm">
+                    {{ replayCountLabel(entry) }}
+                  </span>
+                }
+              </div>
+
+              <a [href]="entry.playUrl" class="btn btn-primary btn-sm btn-block">
+                {{ playActionLabel(entry.playStatus) }}
+              </a>
+            </div>
+          </app-card>
+        }
+      </div>
+
+      <div class="join flex justify-center pt-2">
+        <app-button
+          size="sm"
+          variant="outline"
+          buttonClass="join-item w-24"
+          [disabled]="!hasPreviousPage() || loading()"
+          (clicked)="previousPage()"
+        >
+          Previous
+        </app-button>
+        <span class="join-item btn btn-outline btn-sm pointer-events-none min-w-24">
+          Page {{ page() }}
+        </span>
+        <app-button
+          size="sm"
+          variant="outline"
+          buttonClass="join-item w-24"
+          [disabled]="!hasNextPage() || loading()"
+          (clicked)="nextPage()"
+        >
+          Next
+        </app-button>
+      </div>
+    }
+  </section>
+</app-page-layout>

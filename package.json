@@ -1,0 +1,64 @@
+{
+  "name": "the-newest-era",
+  "version": "0.0.0",
+  "scripts": {
+    "ng": "ng",
+    "start": "ng serve",
+    "build": "ng build",
+    "watch": "ng build --watch --configuration development",
+    "test": "ng test",
+    "deploy": "wrangler deploy",
+    "cf:dev": "wrangler dev"
+  },
+  "prettier": {
+    "printWidth": 100,
+    "singleQuote": true,
+    "overrides": [
+      {
+        "files": "*.html",
+        "options": {
+          "parser": "angular"
+        }
+      }
+    ]
+  },
+  "private": true,
+  "dependencies": {
+    "@angular/common": "^20.2.0",
+    "@angular/compiler": "^20.2.0",
+    "@angular/core": "^20.2.0",
+    "@angular/forms": "^20.2.0",
+    "@angular/platform-browser": "^20.2.0",
+    "@angular/router": "^20.2.0",
+    "@tailwindcss/postcss": "^4.3.3",
+    "@thenewestera/accounts-ng": "^1.0.4",
+    "@thenewestera/browse-ng": "^1.0.9",
+    "@thenewestera/friends-ng": "^1.0.8",
+    "@thenewestera/guess-ng": "^1.0.21",
+    "@thenewestera/leaderboard-ng": "^1.0.7",
+    "@thenewestera/notifications-ng": "^1.0.0",
+    "@thenewestera/puzzle-ng": "^1.0.18",
+    "daisyui": "^5.7.16",
+    "lucide-angular": "^1.0.0",
+    "rxjs": "~7.8.0",
+    "tailwindcss": "^4.3.3",
+    "tslib": "^2.3.0",
+    "zone.js": "~0.15.0"
+  },
+  "devDependencies": {
+    "@angular/build": "^20.2.1",
+    "@angular/cli": "^20.2.1",
+    "@angular/compiler-cli": "^20.2.0",
+    "@types/jasmine": "~5.1.0",
+    "jasmine-core": "~5.9.0",
+    "karma": "~6.4.0",
+    "karma-chrome-launcher": "~3.2.0",
+    "karma-coverage": "~2.2.0",
+    "karma-jasmine": "~5.1.0",
+    "karma-jasmine-html-reporter": "~2.1.0",
+    "postcss": "^8.5.26",
+    "prettier": "^3.9.6",
+    "typescript": "~5.9.2",
+    "wrangler": "^4.120.0"
+  }
+}

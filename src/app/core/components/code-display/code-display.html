@@ -1,0 +1,17 @@
+<div class="flex flex-col items-center gap-4">
+  <div class="rounded-xl border border-base-300 bg-base-200 px-8 py-5 text-center">
+    <div class="text-sm text-base-content/60 mb-2">Your login code</div>
+
+    <div class="font-mono text-4xl font-bold tracking-[0.5em]">
+      {{ code() }}
+    </div>
+  </div>
+
+  <app-button variant="outline" [leftIcon]="copied() ? 'check' : 'copy'" (clicked)="copy()">
+    {{ copied() ? 'Copied!' : 'Copy Code' }}
+  </app-button>
+
+  @if (copyError()) {
+    <app-error-alert [inline]="true" class="text-sm">{{ copyError() }}</app-error-alert>
+  }
+</div>

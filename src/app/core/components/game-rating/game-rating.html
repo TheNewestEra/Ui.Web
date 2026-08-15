@@ -1,0 +1,41 @@
+<app-card class="w-full">
+  <div card-title>{{ heading() }}</div>
+  <div card-subtitle>{{ subtitle() }}</div>
+
+  <div card-content class="flex flex-col gap-3">
+    @if (hasRated()) {
+      <app-success-alert>Thanks for rating!</app-success-alert>
+    }
+
+    <div class="rating rating-lg">
+      <input
+        type="radio"
+        [name]="'game-rating-' + gameId()"
+        class="rating-hidden"
+        aria-label="clear"
+        disabled
+        [checked]="displayedStars() === 0"
+      />
+
+      @for (star of stars; track star) {
+        <input
+          type="radio"
+          [name]="'game-rating-' + gameId()"
+          class="mask mask-star-2 bg-orange-400"
+          [attr.aria-label]="star + ' star'"
+          [disabled]="hasRated() || submitting()"
+          [checked]="star === displayedStars()"
+          (change)="rate(star)"
+        />
+      }
+    </div>
+
+    @if (submitting()) {
+      <p class="text-sm text-base-content/60">Submitting your rating…</p>
+    }
+
+    @if (errorMessage()) {
+      <app-error-alert [inline]="true" class="text-sm">{{ errorMessage() }}</app-error-alert>
+    }
+  </div>
+</app-card>

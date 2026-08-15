@@ -1,0 +1,13 @@
+{
+	"$schema": "./node_modules/wrangler/config-schema.json",
+	"name": "ui-web",
+	"compatibility_date": "2026-08-09",
+	"assets": {
+		"directory": "dist/the-newest-era/browser",
+		"not_found_handling": "single-page-application"
+	},
+	"observability": {
+		"enabled": true,
+		"head_sampling_rate": 1
+	}
+}

@@ -1,0 +1,39 @@
+<div class="toast toast-end toast-bottom z-50 flex w-80 max-w-[calc(100vw-2rem)] flex-col gap-3">
+  @for (toast of toastService.toasts(); track toast.id) {
+    <div
+      class="toast-card relative flex flex-col gap-3 rounded-box border border-base-300 bg-base-100 p-4 shadow-xl"
+      [class.border-l-4]="!!toast.actions?.length"
+      [class.border-l-primary]="!!toast.actions?.length"
+    >
+      <app-button
+        class="absolute top-2 right-2"
+        [unstyled]="true"
+        variant="ghost"
+        size="xs"
+        buttonClass="btn-circle"
+        [iconOnly]="true"
+        leftIcon="circle-x"
+        ariaLabel="Dismiss"
+        (clicked)="toastService.dismiss(toast.id)"
+      />
+
+      <div class="flex flex-col gap-1 pr-6">
+        <p class="font-semibold leading-snug">{{ toast.title }}</p>
+
+        @if (toast.body) {
+          <p class="text-sm leading-snug text-base-content/70">{{ toast.body }}</p>
+        }
+      </div>
+
+      @if (toast.actions?.length) {
+        <div class="flex justify-end gap-2">
+          @for (action of toast.actions!; track action.label) {
+            <app-button size="sm" [variant]="action.variant ?? 'primary'" (clicked)="action.run()">
+              {{ action.label }}
+            </app-button>
+          }
+        </div>
+      }
+    </div>
+  }
+</div>

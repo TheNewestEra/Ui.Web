@@ -1,0 +1,114 @@
+<app-page-layout>
+  <app-page-header
+    title="Account"
+    subtitle="Accounts are entirely optional — every game and puzzle works fine anonymously. Create one if you want a friends list you can invite directly from a game."
+  />
+
+  <section class="flex flex-col space-y-6">
+    @if (userState.isLoggedIn() && !registrationComplete()) {
+      <!-- Logged-in view -->
+      <app-card>
+        <div card-title>Your account</div>
+        <div card-content class="flex flex-col space-y-3">
+          <p>
+            Logged in as <b>{{ userState.displayName() }}</b>
+          </p>
+
+          <p class="text-base-content/70">Your account is ready to use with friends.</p>
+
+          <app-button variant="error" (clicked)="logout()"> Log Out </app-button>
+        </div>
+      </app-card>
+    }
+
+    <!-- Create an Account form -->
+    @if (!registrationComplete() && !userState.isLoggedIn()) {
+      <app-card>
+        <div card-title>Create an account</div>
+
+        <div card-subtitle>
+          Pick a username — we'll generate a 6-digit code you use to log back in later. There's no
+          password to remember.
+        </div>
+
+        <form
+          card-content
+          [formGroup]="registerForm"
+          (ngSubmit)="register()"
+          class="flex flex-col space-y-6"
+        >
+          <app-form-field label="Username" [control]="registerForm.controls.username">
+            <app-input formControlName="username" placeholder="Pick a username" />
+          </app-form-field>
+
+          @if (registerErrorMessage()) {
+            <app-error-alert>
+              {{ registerErrorMessage() }}
+            </app-error-alert>
+          }
+
+          <app-button type="submit" variant="primary" [loading]="registerLoading()">
+            Create Account
+          </app-button>
+        </form>
+      </app-card>
+    }
+    @if (registrationComplete()) {
+      @if (registrationCode()) {
+        <app-card>
+          <div card-title>Account created!</div>
+
+          <div card-subtitle>
+            Keep this code somewhere safe. You'll use it together with your username to log in.
+          </div>
+
+          <div card-content class="space-y-6">
+            <app-code-display [code]="registrationCode()!" />
+
+            <div class="flex justify-end">
+              <app-button
+                variant="primary"
+                rightIcon="arrow-right"
+                (clicked)="continueAfterRegistration()"
+              >
+                Continue
+              </app-button>
+            </div>
+          </div>
+        </app-card>
+      }
+    }
+
+    @if (!userState.isLoggedIn()) {
+      <!-- Login form -->
+      <app-card>
+        <div card-title>Log in</div>
+
+        <form
+          card-content
+          [formGroup]="loginForm"
+          (ngSubmit)="login()"
+          class="flex flex-col space-y-6"
+        >
+          <app-form-field label="Username" [control]="loginForm.controls.username">
+            <app-input formControlName="username" placeholder="Username" />
+          </app-form-field>
+
+          <app-form-field label="Code" [control]="loginForm.controls.code">
+            <app-otp-input formControlName="code" [length]="6" />
+          </app-form-field>
+
+          @if (loginErrorMessage()) {
+            <app-error-alert>
+              {{ loginErrorMessage() }}
+            </app-error-alert>
+          }
+
+          <app-button type="submit" variant="primary" [loading]="loginLoading()">
+            Log in
+          </app-button>
+        </form>
+      </app-card>
+    }
+  </section>
+</app-page-layout>

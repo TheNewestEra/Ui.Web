@@ -1,0 +1,18 @@
+<div class="flex gap-2">
+  @for (value of values; track $index) {
+    <input
+      #otpInput
+      type="text"
+      inputmode="numeric"
+      maxlength="1"
+      autocomplete="one-time-code"
+      class="input input-bordered h-14 w-12 text-center text-xl font-bold"
+      [value]="value"
+      [disabled]="disabled"
+      (input)="onInput($index, $event)"
+      (keydown)="onKeydown($index, $event)"
+      (paste)="onPaste($event)"
+      (blur)="onBlur()"
+    />
+  }
+</div>

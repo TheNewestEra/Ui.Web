@@ -1,0 +1,10 @@
+<input
+  class="input w-full"
+  [type]="type()"
+  [value]="value"
+  [placeholder]="placeholder()"
+  [readonly]="readonly()"
+  [disabled]="disabled"
+  (input)="handleInput($event)"
+  (blur)="handleBlur()"
+/>

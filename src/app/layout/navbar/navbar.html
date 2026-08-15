@@ -1,0 +1,43 @@
+<nav class="navbar bg-base-100 border-b border-base-300 px-6">
+  <div class="flex-none lg:hidden">
+    <label for="sidebar" class="btn btn-square btn-ghost">
+      <app-icon name="menu" />
+    </label>
+  </div>
+
+  <div class="flex-1"></div>
+
+  <div class="flex items-center gap-2">
+    <app-notification-center />
+
+    <div class="dropdown dropdown-end">
+      <app-button
+        tabindex="0"
+        variant="ghost"
+        size="sm"
+        [iconOnly]="true"
+        [leftIcon]="themeIcon()"
+        ariaLabel="Choose theme"
+        title="Choose theme"
+      />
+
+      <div
+        tabindex="0"
+        class="dropdown-content z-50 mt-2 flex w-40 flex-col gap-1 rounded-box border border-base-300 bg-base-100 p-2 shadow"
+      >
+        @for (option of themeOptions; track option.value) {
+          <app-button
+            variant="ghost"
+            size="sm"
+            [leftIcon]="option.icon"
+            [fullWidth]="true"
+            [active]="themeService.theme() === option.value"
+            (clicked)="selectTheme(option.value)"
+          >
+            {{ option.label }}
+          </app-button>
+        }
+      </div>
+    </div>
+  </div>
+</nav>

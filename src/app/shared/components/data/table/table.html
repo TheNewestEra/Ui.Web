@@ -1,0 +1,68 @@
+<div class="overflow-x-auto rounded-box border border-base-300 bg-base-100">
+  @if (loading()) {
+    <div class="flex justify-center p-10">
+      <span class="loading loading-spinner loading-md"></span>
+    </div>
+  } @else if (displayedData().length === 0) {
+    <div class="flex justify-center p-10">
+      <span class="text-base-content/60">
+        {{ emptyMessage() }}
+      </span>
+    </div>
+  } @else {
+    <table class="table">
+      <thead>
+        <tr>
+          @if (showRowNumbers()) {
+            <th class="w-16">#</th>
+          }
+
+          @if (showRank()) {
+            <th class="w-16">Rank</th>
+          }
+
+          @for (column of columns(); track column.key) {
+            <th>
+              {{ column.label }}
+            </th>
+          }
+        </tr>
+      </thead>
+
+      <tbody>
+        @for (item of displayedData(); track $index) {
+          <tr
+            class="cursor-pointer transition-colors"
+            [class.bg-base-200]="
+              $even && striped() && !isHighlighted(item.row) && !isExtraRow(item.row)
+            "
+            [class.bg-primary]="isHighlighted(item.row)"
+            [class.text-primary-content]="isHighlighted(item.row)"
+            [class.bg-secondary]="isExtraRow(item.row)"
+            [class.text-secondary-content]="isExtraRow(item.row)"
+            [class.hover:bg-base-300]="!isHighlighted(item.row) && !isExtraRow(item.row)"
+            (click)="onRowClick(item.row)"
+          >
+            @if (showRowNumbers()) {
+              <td class="font-medium">
+                {{ $index + 1 }}
+              </td>
+            }
+
+            @if (showRank()) {
+              <td class="font-medium">
+                {{ item.rank }}
+              </td>
+            }
+
+            @for (column of columns(); track column.key) {
+              <td>
+                {{ getValue(item.row, column.key) }}
+              </td>
+            }
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+</div>
