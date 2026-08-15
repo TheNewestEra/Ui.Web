@@ -1,6 +1,23 @@
-import { Component, DestroyRef, computed, inject, OnDestroy, OnInit, signal, WritableSignal } from '@angular/core';
+import {
+  Component,
+  DestroyRef,
+  computed,
+  inject,
+  OnDestroy,
+  OnInit,
+  signal,
+  WritableSignal,
+} from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
-import { interval, Subscription, map, filter, distinctUntilChanged, finalize, Observable } from 'rxjs';
+import {
+  interval,
+  Subscription,
+  map,
+  filter,
+  distinctUntilChanged,
+  finalize,
+  Observable,
+} from 'rxjs';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import {
   Game,
@@ -1160,7 +1177,6 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
 
     this.liveGuesses.update((guesses) =>
       [
-        ...guesses,
         {
           id,
           index: message.index,
@@ -1171,7 +1187,8 @@ export class GuessPromptGamePage implements OnInit, OnDestroy {
           score: message.score,
           guess: message.guess ?? '',
         },
-      ].slice(-MAX_VISIBLE_GUESSES),
+        ...guesses,
+      ].slice(0, MAX_VISIBLE_GUESSES),
     );
 
     const timeout = setTimeout(() => {
