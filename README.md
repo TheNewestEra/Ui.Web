@@ -1,69 +1,110 @@
-# AI Games Web
+# The Newest Era — AI Games Web
 
-AI Games Web is the Angular frontend for a collection of AI-powered, real-time games. Players can create games from a theme, invite others with a shared link, play anonymously, and compete for leaderboard scores.
+The Newest Era is an Angular frontend for multiplayer, AI-generated party games. Players can create a game, invite friends, join anonymously or with an account, watch activity in real time, and compete on shared leaderboards.
 
-## Games and features
+---
+
+## Implemented games
 
 ### Guess the Prompt
 
-The platform generates AI images around an optional theme. Players have a limited amount of time to guess the prompt behind each image and earn points for correct answers. The backend configures the number of rounds and generated images.
+AI-generated images are presented over multiple timed rounds. Players submit guesses for the hidden prompt and earn time-weighted points for correct answers.
+
+- Real-time lobby, participant list, presence, and countdown
+- Live guesses with player names and colours; only the latest five remain visible temporarily
+- Private feedback for correct and incorrect guesses
+- Live scores for players and spectators
+- Round transitions, reveal countdowns, solved and timeout states
+- Paginated access to every generated image after the game, without exposing answers
+- Final leaderboard, rating, replay, and fresh-image regeneration
 
 ### Piece Puzzle
 
-The platform generates an AI image and scrambles it into a configurable grid. Players swap tiles to reconstruct the image before time runs out. Multiple players can join the same board and see moves in real time.
+An AI-generated image is divided into a configurable grid and shuffled. Players collaboratively swap tiles to reconstruct it before time expires.
 
-The application also includes:
+- Generated-image preview in the waiting lobby
+- Real-time participants, tile selections, player colours, and move activity
+- Collaborative board updates over WebSockets
+- Time-weighted scoring for correct moves and a live leaderboard
+- Player and spectator views with synchronized timers
+- Final standings for solved and timed-out games
+- Circular timeout viewer for the completed image and the last unfinished board
+- Rating, replay with the same image, and regeneration with a new image
 
-- A game browser with filtering, sorting, ratings, and pagination
-- Global leaderboards
-- Optional passwordless accounts using a username and six-digit login code
-- Anonymous play
-- Friends and game invitations
-- Light and dark themes
-- Real-time game state, player presence, timers, and results over WebSockets
+---
+
+## Platform features
+
+- Anonymous guest play with generated names and colours
+- Passwordless accounts using a username and six-digit login code
+- Per-game participant credentials with one-hour session expiry
+- Friends, friend requests, groups, and game invitations
+- Live notification centre and actionable invitation toasts
+- Browse catalog with game type, status, creator scope, sorting, ratings, and pagination
+- Creator identity and colour on catalog cards
+- Global and friends leaderboards with game and time-period filters
+- Current-player highlighting and friend requests directly from leaderboards
+- Responsive layouts and skeleton loading states
+- Shared UI components for buttons, inputs, selects, cards, alerts, tables, leaderboards, and participant lists
+- System light/dark preference on first visit, followed by persistent Light, Dark, or Forest selection
+- License-free Web Audio cues for timers, game events, scores, notifications, ratings, invitations, and social actions
+
+---
 
 ## Technology
 
-- Angular 20 with standalone components
-- TypeScript and RxJS
-- Tailwind CSS 4 and DaisyUI
-- REST APIs for accounts, games, browsing, friends, and leaderboards
-- WebSockets for live Guess the Prompt and Piece Puzzle sessions
+- Angular 20 standalone components
+- TypeScript 5.9 and RxJS 7
+- Angular reactive forms and signals
+- Tailwind CSS 4 and DaisyUI 5
+- Lucide icons
+- Generated Angular API clients for the backend services
+- REST for commands and catalog/account data
+- WebSockets for games, presence, and notifications
+- Cloudflare Workers static-asset deployment
+
+---
+
+## Backend services
+
+The frontend connects to separately deployed services for Accounts, Guess the Prompt, Piece Puzzle, Browse/catalog and ratings, Friends/groups/invitations, Leaderboards, and Notifications.
+
+REST and WebSocket base URLs are configured in [`src/app/core/constants/base-urls.constants.ts`](src/app/core/constants/base-urls.constants.ts).
+
+---
 
 ## Prerequisites
 
-Install the following before running the project:
-
-- Node.js 20 or later
+- Node.js 20 or later (the Cloudflare workflow uses Node.js 22)
 - npm
 
-## Install dependencies
+---
 
-From the repository root, run:
+## Local development
+
+Install the locked dependencies:
 
 ```bash
 npm ci
 ```
 
-Use `npm install` instead if you intentionally need to update the lock file.
-
-## Run locally
-
-Start the Angular development server:
+Start the development server:
 
 ```bash
 npm start
 ```
 
-Open [http://localhost:4200](http://localhost:4200). The development server reloads the application when source files change.
+Open [http://localhost:4200](http://localhost:4200). The application reloads when source files change.
 
-To continuously compile without running the Angular development server:
+To continuously compile without starting the development server:
 
 ```bash
 npm run watch
 ```
 
-## Build
+---
+
+## Build and verification
 
 Create a production build:
 
@@ -71,65 +112,31 @@ Create a production build:
 npm run build
 ```
 
-The compiled browser application is written to `dist/the-newest-era/browser`.
+The browser output is written to `dist/the-newest-era/browser`.
 
-## Test
-
-Run the unit test suite with Karma:
+Run the unit test suite:
 
 ```bash
 npm test
 ```
 
-## Docker
-
-Build the production image:
+Run focused compiler checks:
 
 ```bash
-docker build -t ai-games-web .
+npx tsc -p tsconfig.app.json --noEmit
+npx ngc -p tsconfig.app.json
 ```
 
-Run the container and expose the Nginx server at [http://localhost:8080](http://localhost:8080):
-
-```bash
-docker run --rm -p 8080:8080 ai-games-web
-```
-
-## Backend services
-
-The frontend connects to separately deployed services for:
-
-- Accounts
-- Guess the Prompt
-- Piece Puzzle
-- Browse
-- Friends
-- Leaderboards
-
-Their REST and WebSocket endpoints are configured in `src/app/core/constants/base-urls.constants.ts`. Update that file when targeting a different backend environment.
+---
 
 ## Application routes
 
-| Route                         | Purpose                                |
-| ----------------------------- | -------------------------------------- |
-| `/` or `/games`               | Create a new game                      |
-| `/games/guess-prompt/:gameId` | Play Guess the Prompt                  |
-| `/games/piece-puzzle/:gameId` | Play Piece Puzzle                      |
-| `/browse`                     | Browse generated games                 |
-| `/leaderboard`                | View rankings                          |
-| `/account`                    | Register, log in, or manage an account |
-| `/dashboard`                  | View the dashboard leaderboard         |
-
-## Useful Angular commands
-
-Generate a standalone component:
-
-```bash
-npx ng generate component component-name --standalone --skip-tests
-```
-
-View the available Angular schematics and command options:
-
-```bash
-npx ng generate --help
-```
+| Route                         | Purpose                                          |
+| ----------------------------- | ------------------------------------------------ |
+| `/` or `/games`               | Create a Guess the Prompt or Piece Puzzle game   |
+| `/games/guess-prompt/:gameId` | Play or spectate Guess the Prompt                |
+| `/games/piece-puzzle/:gameId` | Play or spectate Piece Puzzle                    |
+| `/browse`                     | Browse, filter, rate, replay, or spectate games  |
+| `/friends`                    | Manage friends, requests, and groups             |
+| `/leaderboard`                | View global or friends rankings                  |
+| `/account`                    | Register, log in, view, or log out of an account |
