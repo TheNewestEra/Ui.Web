@@ -129,6 +129,7 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
   readonly joinedPlayerName = signal<string | null>(null);
   readonly moving = signal(false);
   readonly solved = signal(false);
+  readonly timeoutResultPage = signal(0);
 
   readonly tileSelections = signal<ReadonlyMap<number, { player: string; color: string }>>(
     new Map(),
@@ -292,6 +293,7 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
     this.pendingMove = null;
     this.moving.set(false);
     this.solved.set(false);
+    this.timeoutResultPage.set(0);
     this.lobbyRemainingMs.set(0);
     this.remainingMs.set(0);
     this.refreshPlayerIdentity();
@@ -497,6 +499,14 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
     const seconds = totalSeconds % 60;
 
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  }
+
+  previousTimeoutResult(): void {
+    this.timeoutResultPage.update((page) => (page + 1) % 2);
+  }
+
+  nextTimeoutResult(): void {
+    this.timeoutResultPage.update((page) => (page + 1) % 2);
   }
 
   private playCountdownSound(milliseconds: number): void {
