@@ -1,29 +1,43 @@
 <app-page-layout>
   <app-page-header title="Guess the Prompt" />
 
-  <section class="w-full flex flex-col gap-2">
+  <section class="flex w-full flex-col gap-2">
     @if (loading()) {
-      <div class="flex flex-col gap-5 py-1" aria-busy="true" aria-label="Loading game">
-        <div class="flex items-center justify-between">
-          <span class="skeleton h-5 w-32"></span>
-          <span class="skeleton h-10 w-24"></span>
-        </div>
+      <div class="mx-auto w-full max-w-3xl py-8" aria-busy="true" aria-label="Loading game">
+        <div class="overflow-hidden rounded-box border border-base-300 bg-base-100 shadow-sm">
+          <div class="flex flex-col items-center border-b border-base-300 px-6 py-8">
+            <div class="skeleton size-14 rounded-full"></div>
+            <div class="skeleton mt-5 h-9 w-64 max-w-full"></div>
+            <div class="skeleton mt-3 h-4 w-full max-w-md"></div>
+            <div class="skeleton mt-2 h-4 w-3/4 max-w-sm"></div>
+            <div class="skeleton mt-6 h-16 w-40"></div>
+            <div class="skeleton mt-2 h-4 w-36"></div>
+          </div>
 
-        <div class="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
-          <div class="skeleton aspect-square w-full rounded-box"></div>
-          <div class="flex flex-col gap-6">
-            <div class="rounded-box border border-base-300 bg-base-100 p-6">
-              <div class="skeleton h-7 w-3/4"></div>
-              <div class="skeleton mt-3 h-4 w-full"></div>
-              <div class="skeleton mt-2 h-4 w-2/3"></div>
-              <div class="skeleton mt-8 h-12 w-full"></div>
-              <div class="skeleton mt-4 h-10 w-full"></div>
+          <div class="grid grid-cols-2 divide-x divide-base-300 border-b border-base-300">
+            <div class="p-5">
+              <div class="skeleton mx-auto h-4 w-16"></div>
+              <div class="skeleton mx-auto mt-2 h-8 w-10"></div>
             </div>
+            <div class="p-5">
+              <div class="skeleton mx-auto h-4 w-20"></div>
+              <div class="skeleton mx-auto mt-2 h-8 w-10"></div>
+            </div>
+          </div>
 
-            <div class="rounded-box border border-base-300 bg-base-100 p-6">
-              <div class="skeleton h-6 w-36"></div>
-              <div class="skeleton mt-5 h-12 w-full"></div>
-              <div class="skeleton mt-3 h-12 w-full"></div>
+          <div class="border-b border-base-300 px-6 py-5">
+            <div class="skeleton h-5 w-36"></div>
+            <div class="mt-3 flex gap-3">
+              <div class="skeleton h-10 w-28"></div>
+              <div class="skeleton h-10 w-32"></div>
+            </div>
+          </div>
+
+          <div class="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
+            <div class="skeleton h-5 w-48"></div>
+            <div class="flex gap-3">
+              <div class="skeleton h-10 w-28"></div>
+              <div class="skeleton h-10 w-24"></div>
             </div>
           </div>
         </div>
@@ -34,20 +48,45 @@
       </app-error-alert>
     } @else if (game(); as game) {
       @if (game?.status === GameStatus.Generating || game.status === GameStatus.Queued) {
-        <div class="flex flex-col gap-6 py-8" aria-busy="true">
-          <div class="text-center">
-            <h2 class="text-xl font-semibold">Generating images</h2>
-            <p class="mt-2 text-base-content/60">Almost ready...</p>
-          </div>
+        <div class="mx-auto w-full max-w-3xl py-8" aria-busy="true" aria-label="Generating images">
+          <div class="overflow-hidden rounded-box border border-base-300 bg-base-100 shadow-sm">
+            <div class="flex flex-col items-center border-b border-base-300 px-6 py-8 text-center">
+              <div class="mb-4 flex size-14 items-center justify-center rounded-full bg-primary/10">
+                <app-icon name="layout-grid" class="text-primary" />
+              </div>
+              <h2 class="text-3xl font-bold">Generating images</h2>
+              <p class="mt-2 max-w-md text-base-content/60">
+                Your rounds are being created and will be ready shortly.
+              </p>
+              <div class="skeleton mt-6 h-16 w-40"></div>
+              <p class="mt-2 text-sm text-base-content/60">preparing the game</p>
+            </div>
 
-          <div class="mx-auto grid w-full max-w-4xl grid-cols-1 gap-6 lg:grid-cols-2">
-            <div class="skeleton aspect-square w-full rounded-box"></div>
-            <div class="rounded-box border border-base-300 bg-base-100 p-6">
-              <div class="skeleton h-7 w-3/4"></div>
-              <div class="skeleton mt-3 h-4 w-full"></div>
-              <div class="skeleton mt-2 h-4 w-2/3"></div>
-              <div class="skeleton mt-8 h-12 w-full"></div>
-              <div class="skeleton mt-4 h-10 w-full"></div>
+            <div class="grid grid-cols-2 divide-x divide-base-300 border-b border-base-300">
+              <div class="p-5">
+                <div class="skeleton mx-auto h-4 w-16"></div>
+                <div class="skeleton mx-auto mt-2 h-8 w-10"></div>
+              </div>
+              <div class="p-5">
+                <div class="skeleton mx-auto h-4 w-20"></div>
+                <div class="skeleton mx-auto mt-2 h-8 w-10"></div>
+              </div>
+            </div>
+
+            <div class="border-b border-base-300 px-6 py-5">
+              <div class="skeleton h-5 w-36"></div>
+              <div class="mt-3 flex gap-3">
+                <div class="skeleton h-10 w-28"></div>
+                <div class="skeleton h-10 w-32"></div>
+              </div>
+            </div>
+
+            <div class="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
+              <div class="skeleton h-5 w-48"></div>
+              <div class="flex gap-3">
+                <div class="skeleton h-10 w-28"></div>
+                <div class="skeleton h-10 w-24"></div>
+              </div>
             </div>
           </div>
         </div>
