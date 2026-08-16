@@ -1,5 +1,6 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { AppShellComponent } from '@layout/app-shell/app-shell';
+import { SeoService } from '@core/services/seo.service';
 
 @Component({
   selector: 'app-root',
@@ -7,4 +8,10 @@ import { AppShellComponent } from '@layout/app-shell/app-shell';
   templateUrl: './app.html',
   styleUrl: './app.css',
 })
-export class App {}
+export class App {
+  private readonly seo = inject(SeoService);
+
+  constructor() {
+    this.seo.init();
+  }
+}

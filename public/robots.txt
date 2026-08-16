@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /account
+Disallow: /games/guess-prompt/
+Disallow: /games/piece-puzzle/
+
+Sitemap: https://era.ryanb.co.za/sitemap.xml
