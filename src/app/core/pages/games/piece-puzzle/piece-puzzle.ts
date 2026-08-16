@@ -47,7 +47,7 @@ import { PageLayoutComponent } from '@layout/page-layout/page-layout';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header';
 import { UserStateService } from '@core/services/user-state.service';
 import { PiecePuzzleSocketService } from '@core/services/piece-puzzle-socket.service';
-import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ButtonComponent } from '@shared/components/button/button';
 import { LOCAL_STORAGE_KEYS } from '@core/constants/local-storage-keys.constants';
 import { PiecePuzzleGameService } from '@core/services/piece-puzzle-game.service';
@@ -104,12 +104,15 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
 
   readonly gameId = signal<string | null>(null);
   readonly game = signal<Puzzle | null>(null);
-  game$ = toObservable(this.game);
 
-  readonly puzzleImage = signal<string | null>(null);
+  // Direct R2 URL straight off the puzzle's own state now (see
+  // PuzzlePublicSchema's `sourceImageUrl`) — no more separate
+  // GET /puzzles/{id}/image round trip, so this needs neither its own
+  // loading flag nor `URL.revokeObjectURL()` cleanup the way the old
+  // blob-fetched version did.
+  readonly puzzleImage = computed(() => this.game()?.sourceImageUrl ?? null);
 
   readonly loading = signal(true);
-  readonly imageLoading = signal(true);
   readonly joining = signal(false);
   readonly starting = signal(false);
   readonly replaying = signal(false);
@@ -273,12 +276,6 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
     );
   });
 
-  constructor() {
-    this.game$.subscribe((game) => {
-      this.loadPuzzleImage(game!);
-    });
-  }
-
   ngOnInit(): void {
     this.puzzleSocket.messages.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((message) => {
       this.handleSocketMessage(message);
@@ -301,14 +298,9 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
   private initializeGame(gameId: string): void {
     this.stopTimer();
 
-    const previousImage = this.puzzleImage();
-    if (previousImage) URL.revokeObjectURL(previousImage);
-
     this.gameId.set(gameId);
     this.game.set(null);
-    this.puzzleImage.set(null);
     this.loading.set(true);
-    this.imageLoading.set(true);
     this.errorMessage.set(null);
     this.joinErrorMessage.set(null);
     this.shareMessage.set(null);
@@ -343,10 +335,6 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     if (this.timerInterval) clearInterval(this.timerInterval);
-
-    const imageUrl = this.puzzleImage();
-
-    if (imageUrl) URL.revokeObjectURL(imageUrl);
 
     this.puzzleSocket.disconnect();
   }
@@ -619,6 +607,7 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
       theme: message.theme ?? '',
       themeGenerated: message.themeGenerated,
       prompt: message.prompt ?? '',
+      sourceImageUrl: message.sourceImageUrl,
       status: message.status,
       error: message.error ?? '',
       gridSize: message.gridSize,
@@ -911,36 +900,6 @@ export class PiecePuzzleGamePage implements OnInit, OnDestroy {
     if (status === PuzzleStatus.Playing && previousStatus !== PuzzleStatus.Playing) {
       this.sound.gameStarted();
     }
-  }
-
-  private loadPuzzleImage(game: Puzzle | null): void {
-    if (game === null) return;
-
-    if (game.status == PuzzleStatus.Queued) return;
-
-    if (game.status == PuzzleStatus.Generating) return;
-
-    // If there is an image already, it will NOT call the BE
-    if (this.puzzleImage()) return;
-
-    this.imageLoading.set(true);
-
-    const gameId = this.gameId();
-    if (!gameId) return;
-
-    this.piecePuzzleService
-      .puzzlesIdImageGet(gameId)
-      .pipe(finalize(() => this.imageLoading.set(false)))
-      .subscribe({
-        next: (image: Blob) => {
-          const imageUrl = URL.createObjectURL(image);
-          this.puzzleImage.set(imageUrl);
-        },
-
-        error: (error) => {
-          this.errorMessage.set(error?.error?.error ?? 'Unable to load the puzzle image.');
-        },
-      });
   }
 
   private updateTimers(puzzleStateMessage: PuzzleWsStateMessage): void {
